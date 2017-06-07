@@ -1,21 +1,19 @@
-#ifndef WORK_H__
-#define WORK_H__
+#ifndef WORK_H_
+#define WORK_H_
 
-// 业务代码包装
+namespace tinyco {
+// wrapper for business
+// user can inherit from it and implement Run function
 class Work {
-private:
+ private:
   /* data */
-public:
-  Work () {
-  }
+ public:
+  Work() {}
 
-  virtual ~Work () {
+  virtual ~Work() {}
 
-  }
-
-  virtual int Run(){
-    return 0;
-  }
+  virtual int Run() = 0;
 };
+}
 
 #endif

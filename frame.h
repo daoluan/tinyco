@@ -1,50 +1,71 @@
-#ifndef FRAME_H__
-#define FRAME_H__
+#ifndef FRAME_H_
+#define FRAME_H_
 
 #include <inttypes.h>
 #include <unordered_map>
+#include <event2/event.h>
 #include <list>
+#include <vector>
 #include <memory>
+
 #include "thread.h"
+#include "work.h"
+
+namespace tinyco {
+
+#define LOG(fmt, arg...) \
+  printf("[%s][%s][%u]: " fmt "\n", __FILE__, __FUNCTION__, __LINE__, ##arg)
 
 class IsCompleteBase {
-public:
-  IsCompleteBase () {}
-  virtual ~IsCompleteBase () {}
+ public:
+  IsCompleteBase() {}
+  virtual ~IsCompleteBase() {}
 
-  bool operator()(char *buffer, uint32_t buffer_len) {
-    return true;
-  }
+  int operator()(char *buffer, uint32_t buffer_len) { return 0; }
 };
 
 class Frame {
-public:
-  Frame () {}
-  static int Process();
-  virtual ~Frame () {}
-
+ public:
   static bool Init();
-public:
-  static int UdpSendAndRecv(int fd, const std::string &sendbuf, const struct sockaddr_in &dest_addr,
-    std::string *recvbuf);
-  static int UdpSendAndRecv(int fd, char *sendbuf, uint32_t senlen, char *recvbuf,
-    uint32_t *recvlen);
-  static int TcpSendAndRecv(int fd, const std::string &sendbuf, std::string *recvbuf,
-    IsCompleteBase *is_complete);
-  static int TcpSendAndRecv(int fd, char *sendbuf, uint32_t senlen, char *recvbuf,
-    uint32_t *recvlen, IsCompleteBase *is_complete);
+  static bool Fini();
 
-  static void RecordRunnableThread() {
-  }
-
+ public:
+  static int UdpSendAndRecv(const std::string &sendbuf,
+                            struct sockaddr_in &dest_addr,
+                            std::string *recvbuf);
+  static int TcpSendAndRecv(int fd, const std::string &sendbuf,
+                            std::string *recvbuf, IsCompleteBase *is_complete);
+  static int CreateThread(Work *w);
+  static void Sleep(uint32_t ms);
   static int Schedule();
+  static void RecycleRunningThread();
 
-public:
-  // TODO 如果不是 fd 怎么办，不能完全按网络的思路来写
-  static std::unordered_map<int, std::shared_ptr<Thread>> thread_map_;
-  static std::list<std::shared_ptr<Thread>> thread_runnable_;
-  static std::shared_ptr<Thread> main_thread_;
-  static std::shared_ptr<Thread> running_thread_;
+ private:
+  static void SocketReadable(int fd, short events, void *arg);
+  static int MainThreadLoop(void *arg);
+  static void PendThread(Thread *t);
+  static Thread *PopPendingTop();
+  static void WakeupPendingThread();
+  static timeval GetEventLoopTimeout();
+  static int EventLoop(const timeval &tv);
+  static void UpdateLoopTimestamp();
+  static uint64_t GetLastLoopTimestamp() { return last_loop_ts_; }
+
+  static std::unordered_map<int, Thread *> io_wait_map_;
+  static std::list<Thread *> thread_runnable_;
+  static std::list<Thread *> thread_free_;
+  static std::vector<Thread *> thread_pending_;
+  static Thread *main_thread_;
+  static Thread *running_thread_;
+  static Thread *prunning_thread_;
+  static struct event_base *base;
+
+ private:
+  Frame() {}
+  virtual ~Frame() {}
+
+  static uint64_t last_loop_ts_;
 };
+}
 
 #endif
