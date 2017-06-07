@@ -1,22 +1,8 @@
-#include <iostream>
-#include <inttypes.h>
-#include <ucontext.h>
 #include <stdio.h>
-#include <list>
-#include <stdlib.h>
-#include <string.h>
-#include "frame.h"
-#include "thread.h"
 #include <arpa/inet.h>
-#include <sys/socket.h>
 #include <assert.h>
-#include <string>
-#include <unistd.h>
-#include <ucontext.h>
 
 #include "frame.h"
-#include "work.h"
-#include "thread.h"
 
 using namespace tinyco;
 class TestWork : public Work {
@@ -38,7 +24,8 @@ class TestWork : public Work {
     Frame::Sleep(2000);
 
     LOG("client send pkg to udp server and receive the same content");
-    LOG("in order to test, udp server will wait for 1 second after receive pkg "
+    LOG("in order to test, udp server will wait for 1 second after receiving "
+        "pkg "
         "from client");
     LOG("send content: %s", sendbuf.c_str());
     std::string recvbuf;
