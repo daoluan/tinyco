@@ -98,6 +98,7 @@ void Frame::WakeupPendingThread() {
     while (sz-- && n->GetPendingDuration() >= nowms) {
       n = PopPendingTop();
       n->Pending(0);
+      n->SetState(Thread::TS_RUNNABLE);
       thread_runnable_.push_back(n);
 
       n = *thread_pending_.begin();
@@ -106,7 +107,7 @@ void Frame::WakeupPendingThread() {
 }
 
 timeval Frame::GetEventLoopTimeout() {
-  uint64_t nowms = GetLastLoopTimestamp();
+  auto nowms = GetLastLoopTimestamp();
   struct timeval timeout = {0, 100000};
   if (!thread_pending_.empty()) {
     auto mint = *thread_pending_.begin();
@@ -164,6 +165,7 @@ int Frame::UdpSendAndRecv(const std::string &sendbuf,
         event_add(ev, NULL);  // add timeout
         io_wait_map_[fd] = running_thread_;
         running_thread_->Schedule();
+        running_thread_->SetState(Thread::TS_STOP);
         Schedule();
 
         if (ev->ev_res & EV_TIMEOUT) {
@@ -235,6 +237,7 @@ int Frame::Schedule() {
 void Frame::Sleep(uint32_t ms) {
   if (running_thread_) {
     running_thread_->Pending(mstime() + ms);
+    running_thread_->SetState(Thread::TS_STOP);
     thread_pending_.push_back(running_thread_);
     running_thread_->Schedule();
     running_thread_ = NULL;
