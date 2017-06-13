@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <assert.h>
+#include <iostream>
+#include <fcntl.h>
 
 #include "frame.h"
 
@@ -25,8 +27,7 @@ class TestWork : public Work {
 
     LOG("client send pkg to udp server and receive the same content");
     LOG("in order to test, udp server will wait for 1 second after receiving "
-        "pkg "
-        "from client");
+        "pkg from client");
     LOG("send content: %s", sendbuf.c_str());
     std::string recvbuf;
     int ret = Frame::UdpSendAndRecv(sendbuf, addr, &recvbuf);

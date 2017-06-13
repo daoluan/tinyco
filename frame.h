@@ -21,7 +21,7 @@ class IsCompleteBase {
   IsCompleteBase() {}
   virtual ~IsCompleteBase() {}
 
-  int operator()(char *buffer, uint32_t buffer_len) { return 0; }
+  int CheckPkg(const char *buffer, uint32_t buffer_len) { return 0; }
 };
 
 class Frame {
@@ -33,8 +33,16 @@ class Frame {
   static int UdpSendAndRecv(const std::string &sendbuf,
                             struct sockaddr_in &dest_addr,
                             std::string *recvbuf);
-  static int TcpSendAndRecv(int fd, const std::string &sendbuf,
-                            std::string *recvbuf, IsCompleteBase *is_complete);
+  static int TcpSendAndRecv(const void *sendbuf, size_t sendlen, void *recvbuf,
+                            size_t *recvlen, IsCompleteBase *is_complete);
+  static int connect(int sockfd, const struct sockaddr *addr,
+                     socklen_t addrlen);
+  static int send(int sockfd, const void *buf, size_t len, int flags);
+  static int recv(int sockfd, void *buf, size_t len, int flags);
+  static int sendto(int sockfd, const void *buf, size_t len, int flags,
+                    const struct sockaddr *dest_addr, socklen_t addrlen);
+  static ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
+                          struct sockaddr *src_addr, socklen_t *addrlen);
   static int CreateThread(Work *w);
   static void Sleep(uint32_t ms);
   static int Schedule();
