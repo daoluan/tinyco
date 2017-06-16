@@ -14,9 +14,6 @@ class TestWork : public http::HttpSrvWork {
 
     return 0;
   }
-
- private:
-  int sockfd_;
 };
 
 int main() {
