@@ -53,7 +53,7 @@ class Frame {
   static void RecycleRunningThread();
 
   template <class W>
-  static int ListenAndAccept(uint32_t ip, uint16_t port);
+  static int TcpSrv(uint32_t ip, uint16_t port);
 
  private:
   static void SocketReadOrWrite(int fd, short events, void *arg);
@@ -91,13 +91,13 @@ class defer {
 };
 
 template <class W>
-class ListenAndAcceptWork : public Work {
+class TcpSrvWork : public Work {
  public:
-  ListenAndAcceptWork(uint32_t ip, uint16_t port) : ip_(ip), port_(port) {}
-  virtual ~ListenAndAcceptWork() {}
+  TcpSrvWork(uint32_t ip, uint16_t port) : ip_(ip), port_(port) {}
+  virtual ~TcpSrvWork() {}
 
   int Run() {
-    int ret = RunListenAndAccept();
+    int ret = RunTcpSrv();
     if (ret < 0) {
       LOG("server error: %d", ret);
       exit(1);
@@ -105,7 +105,7 @@ class ListenAndAcceptWork : public Work {
   }
 
  private:
-  int RunListenAndAccept() {
+  int RunTcpSrv() {
     auto listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd < 0) {
       LOG("socket error");
@@ -184,8 +184,8 @@ class ListenAndAcceptWork : public Work {
 };
 
 template <class W>
-int Frame::ListenAndAccept(uint32_t ip, uint16_t port) {
-  Frame::CreateThread(new ListenAndAcceptWork<W>(ip, port));
+int Frame::TcpSrv(uint32_t ip, uint16_t port) {
+  Frame::CreateThread(new TcpSrvWork<W>(ip, port));
   Frame::Schedule();
 }
 }

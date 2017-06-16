@@ -18,7 +18,7 @@ class TestWork : public http::HttpSrvWork {
 
 int main() {
   assert(Frame::Init());
-  Frame::ListenAndAccept<TestWork>(0, 8080);
+  Frame::TcpSrv<TestWork>(0, 8080);
   Frame::Fini();
   return 0;
 }
