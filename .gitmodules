@@ -1,3 +1,6 @@
 [submodule "third-party/http-parser"]
 	path = third-party/http-parser
 	url = https://github.com/nodejs/http-parser.git
+[submodule "third-party/libevent"]
+	path = third-party/libevent
+	url = https://github.com/libevent/libevent.git
