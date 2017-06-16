@@ -1,5 +1,5 @@
-#ifndef TCP_NETWORK_H_
-#define TCP_NETWORK_H_
+#ifndef TCP_CONN_H_
+#define TCP_CONN_H_
 
 #include <inttypes.h>
 #include <string>

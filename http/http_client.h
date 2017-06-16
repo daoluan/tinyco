@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <string>
 
-#include "tcp_network.h"
+#include "tcp_conn.h"
 
 namespace tinyco {
 namespace http {

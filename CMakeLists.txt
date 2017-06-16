@@ -19,7 +19,7 @@ add_executable(http_client
     ./http/http_client.cc
     ./http/https_client.cc
     ./thread.cc
-    ./http/tcp_network.cc
+    ./http/tcp_conn.cc
     ./http/http_request.cc
     ./http/http_response.cc
     ./http/http_op.cc
