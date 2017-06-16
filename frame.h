@@ -24,7 +24,7 @@ class IsCompleteBase {
   IsCompleteBase() {}
   virtual ~IsCompleteBase() {}
 
-  int CheckPkg(const char *buffer, uint32_t buffer_len) { return 0; }
+  virtual int CheckPkg(const char *buffer, uint32_t buffer_len) { return 0; }
 };
 
 class Frame {
@@ -97,10 +97,19 @@ class ListenAndAcceptWork : public Work {
   virtual ~ListenAndAcceptWork() {}
 
   int Run() {
+    int ret = RunListenAndAccept();
+    if (ret < 0) {
+      LOG("server error: %d", ret);
+      exit(1);
+    }
+  }
+
+ private:
+  int RunListenAndAccept() {
     auto listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd < 0) {
       LOG("socket error");
-      return -1;
+      return -__LINE__;
     }
 
     defer d([=] { close(listenfd); });
@@ -113,7 +122,7 @@ class ListenAndAcceptWork : public Work {
     auto flags = fcntl(listenfd, F_GETFL, 0);
     if (flags < 0) {
       LOG("fcntl get error");
-      return -1;
+      return -__LINE__;
     }
 
     flags = flags | O_NONBLOCK;
@@ -123,30 +132,30 @@ class ListenAndAcceptWork : public Work {
     if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) <
         0) {
       LOG("fail to setsockopt(SO_REUSEADDR)");
-      return -1;
+      return -__LINE__;
     }
 
     if (bind(listenfd, (struct sockaddr *)&server, sizeof(server)) < 0) {
       LOG("bind error");
-      return -1;
+      return -__LINE__;
     }
 
     if (listen(listenfd, 5) < 0) {
       LOG("listen error");
-      return -1;
-    }
-
-    auto masterpid = getpid();
-    for (auto i = 0; i < 3; i++) {
-      if (fork() > 0)  // parent
-        break;
+      return -__LINE__;
     }
 
     // try to lock when multiprocss on
+    auto masterpid = getpid();
     FileMtx fm;
     if (fm.OpenLockFile(std::string("/tmp/tinyco_lf_") +
                         std::to_string(masterpid)) < 0) {
-      return -1;
+      return -__LINE__;
+    }
+
+    for (auto i = 0; i < 3; i++) {  // todo configurable
+      if (fork() > 0)               // child
+        break;
     }
 
     while (true) {
@@ -158,7 +167,8 @@ class ListenAndAcceptWork : public Work {
 
       socklen_t socklen = sizeof(client);
       auto fd = Frame::accept(listenfd, (struct sockaddr *)&client, &socklen);
-      auto w = new W(fd);
+      auto w = new W;
+      w->SetFd(fd);
       if (fd < 0) {
         continue;
       }
@@ -169,8 +179,6 @@ class ListenAndAcceptWork : public Work {
 
     return 0;
   }
-
- private:
   uint32_t ip_;
   uint16_t port_;
 };

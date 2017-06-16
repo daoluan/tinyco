@@ -60,6 +60,7 @@ class TestWork : public Work {
     return 0;
   }
 };
+
 int main() {
   tinyco::Frame::Init();
   Frame::CreateThread(new TestWork);

@@ -9,11 +9,13 @@
 #include <sys/time.h>
 #include <algorithm>
 #include <memory>
+
 namespace tinyco {
+
 std::unordered_map<int, Thread *> Frame::io_wait_map_;  // wait on io
 std::list<Thread *> Frame::thread_runnable_;
-std::list<Thread *> Frame::thread_free_;
-std::vector<Thread *> Frame::thread_pending_;
+std::list<Thread *> Frame::thread_free_;       // like memory pool
+std::vector<Thread *> Frame::thread_pending_;  // sleeping thread
 Thread *Frame::main_thread_;
 Thread *Frame::running_thread_;
 Thread *Frame::prunning_thread_;

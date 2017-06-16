@@ -27,11 +27,16 @@ add_executable(http_client
     ./http/http_tool.cc
     ./third-party/http-parser/http_parser.c)
 
-add_executable(tcsrv
-    ./test/tcsrv/main.cc
+add_executable(http_server
+    ./test/http_server/main.cc
     frame.cc  
     thread.cc
-    mutex.cc)
+    mutex.cc
+    ./http/http_tool.cc
+    ./http/http_server.cc
+    ./third-party/http-parser/http_parser.c
+    ./http/http_request.cc
+    ./http/http_response.cc)
 
 include_directories(
     ./
@@ -41,7 +46,7 @@ include_directories(
 target_link_libraries(udp_client
     libevent.a -lrt)
 
-target_link_libraries(tcsrv
+target_link_libraries(http_server
     libevent.a -lrt)
 
 target_link_libraries(http_client
