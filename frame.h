@@ -7,9 +7,12 @@
 #include <list>
 #include <vector>
 #include <memory>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "thread.h"
 #include "work.h"
+#include "mutex.h"
 
 namespace tinyco {
 
@@ -35,6 +38,7 @@ class Frame {
                             std::string *recvbuf);
   static int TcpSendAndRecv(const void *sendbuf, size_t sendlen, void *recvbuf,
                             size_t *recvlen, IsCompleteBase *is_complete);
+  static int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
   static int connect(int sockfd, const struct sockaddr *addr,
                      socklen_t addrlen);
   static int send(int sockfd, const void *buf, size_t len, int flags);
@@ -48,8 +52,11 @@ class Frame {
   static int Schedule();
   static void RecycleRunningThread();
 
+  template <class W>
+  static int ListenAndAccept(uint32_t ip, uint16_t port);
+
  private:
-  static void SocketReadable(int fd, short events, void *arg);
+  static void SocketReadOrWrite(int fd, short events, void *arg);
   static int MainThreadLoop(void *arg);
   static void PendThread(Thread *t);
   static Thread *PopPendingTop();
@@ -74,6 +81,105 @@ class Frame {
 
   static uint64_t last_loop_ts_;
 };
+
+class defer {
+  std::function<void()> t;
+
+ public:
+  defer(std::function<void()> &&t) : t(t) {}
+  ~defer() { t(); }
+};
+
+template <class W>
+class ListenAndAcceptWork : public Work {
+ public:
+  ListenAndAcceptWork(uint32_t ip, uint16_t port) : ip_(ip), port_(port) {}
+  virtual ~ListenAndAcceptWork() {}
+
+  int Run() {
+    auto listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenfd < 0) {
+      LOG("socket error");
+      return -1;
+    }
+
+    defer d([=] { close(listenfd); });
+
+    struct sockaddr_in server, client;
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = ip_;
+    server.sin_port = htons(port_);
+
+    auto flags = fcntl(listenfd, F_GETFL, 0);
+    if (flags < 0) {
+      LOG("fcntl get error");
+      return -1;
+    }
+
+    flags = flags | O_NONBLOCK;
+    fcntl(listenfd, F_SETFL, flags);
+
+    int enable = 1;
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) <
+        0) {
+      LOG("fail to setsockopt(SO_REUSEADDR)");
+      return -1;
+    }
+
+    if (bind(listenfd, (struct sockaddr *)&server, sizeof(server)) < 0) {
+      LOG("bind error");
+      return -1;
+    }
+
+    if (listen(listenfd, 5) < 0) {
+      LOG("listen error");
+      return -1;
+    }
+
+    auto masterpid = getpid();
+    for (auto i = 0; i < 3; i++) {
+      if (fork() > 0)  // parent
+        break;
+    }
+
+    // try to lock when multiprocss on
+    FileMtx fm;
+    if (fm.OpenLockFile(std::string("/tmp/tinyco_lf_") +
+                        std::to_string(masterpid)) < 0) {
+      return -1;
+    }
+
+    while (true) {
+      if (fm.TryLock() < 0) {
+        // lock error, schedule out
+        Frame::Sleep(500);
+        continue;
+      }
+
+      socklen_t socklen = sizeof(client);
+      auto fd = Frame::accept(listenfd, (struct sockaddr *)&client, &socklen);
+      auto w = new W(fd);
+      if (fd < 0) {
+        continue;
+      }
+
+      fm.Unlock();
+      Frame::CreateThread(w);
+    }
+
+    return 0;
+  }
+
+ private:
+  uint32_t ip_;
+  uint16_t port_;
+};
+
+template <class W>
+int Frame::ListenAndAccept(uint32_t ip, uint16_t port) {
+  Frame::CreateThread(new ListenAndAcceptWork<W>(ip, port));
+  Frame::Schedule();
+}
 }
 
 #endif

@@ -7,15 +7,15 @@ add_definitions(${MYFLAG})
 
 project (tinco)
 add_executable(udp_client
-    ./tool/udp_client/main.cc
+    ./test/udp_client/main.cc
     frame.cc
     thread.cc)
 
 add_executable(udp_server
-    ./tool/udp_server/main.cc)
+    ./test/udp_server/main.cc)
 
 add_executable(http_client
-    ./tool/http_client/main.cc
+    ./test/http_client/main.cc
     ./http/http_client.cc
     ./http/https_client.cc
     ./thread.cc
@@ -27,12 +27,21 @@ add_executable(http_client
     ./http/http_tool.cc
     ./third-party/http-parser/http_parser.c)
 
+add_executable(tcsrv
+    ./test/tcsrv/main.cc
+    frame.cc  
+    thread.cc
+    mutex.cc)
+
 include_directories(
     ./
     ./http/
     ./third-party/http-parser)
 
 target_link_libraries(udp_client
+    libevent.a -lrt)
+
+target_link_libraries(tcsrv
     libevent.a -lrt)
 
 target_link_libraries(http_client

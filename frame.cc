@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <algorithm>
-
+#include <memory>
 namespace tinyco {
 std::unordered_map<int, Thread *> Frame::io_wait_map_;  // wait on io
 std::list<Thread *> Frame::thread_runnable_;
@@ -141,37 +141,17 @@ int Frame::UdpSendAndRecv(const std::string &sendbuf,
   }
 
   socklen_t sockaddr_len = sizeof(dest_addr);
-  struct event *ev = NULL;
-  while (true) {
-    if ((ret = ::recvfrom(fd, recvbuf_, sizeof(recvbuf), 0,
-                          (struct sockaddr *)&dest_addr, &sockaddr_len)) < 0) {
-
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        if (!ev) ev = event_new(NULL, -1, 0, NULL, NULL);
-        event_assign(ev, base, fd, EV_READ, SocketReadable, ev);
-        event_add(ev, NULL);  // add timeout
-        io_wait_map_[fd] = running_thread_;
-        running_thread_->Schedule();
-        running_thread_->SetState(Thread::TS_STOP);
-        Schedule();
-
-        if (ev->ev_res & EV_TIMEOUT) {
-          break;
-        } else if (ev->ev_res & EV_READ) {
-          continue;
-        }
-        break;
-      }
-      break;
-    }
-
-    if (ret > 0) {
-      recvbuf->assign(recvbuf_, ret);
-      break;
-    }
+  if ((ret = recvfrom(fd, recvbuf_, sizeof(recvbuf), 0,
+                      (struct sockaddr *)&dest_addr, &sockaddr_len)) < 0) {
+    if (errno == EAGAIN || errno == EWOULDBLOCK)
+      return -2;
+    else
+      return -2;
   }
 
-  if (ev) event_free(ev);
+  if (ret > 0) {
+    recvbuf->assign(recvbuf_, ret);
+  }
 
   return 0;
 }
@@ -185,7 +165,6 @@ int Frame::TcpSendAndRecv(const void *sendbuf, size_t sendlen, void *recvbuf,
   flags = flags | O_NONBLOCK;
   fcntl(fd, F_SETFL, flags);
 
-  struct event *ev = NULL;
   while (nsend == sendlen) {
     int ret = send(fd, static_cast<const char *>(sendbuf) + nsend,
                    sendlen - nsend, 0);
@@ -224,22 +203,43 @@ int Frame::TcpSendAndRecv(const void *sendbuf, size_t sendlen, void *recvbuf,
   return 0;
 }
 
+int Frame::accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+  int fd = -1;
+  struct event ev;
+  while (fd < 0) {
+    fd = ::accept(sockfd, addr, addrlen);
+    if (fd < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+
+        event_assign(&ev, base, sockfd, EV_READ, SocketReadOrWrite, &ev);
+        event_add(&ev, NULL);
+        io_wait_map_[sockfd] = running_thread_;
+        running_thread_->Schedule();
+        running_thread_->SetState(Thread::TS_STOP);
+        Schedule();
+      } else {
+        return -1;
+      }
+    }
+  }
+
+  return fd;
+}
+
 int Frame::connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
-  struct event *ev = NULL;
-  struct timeval timeout = {0, 100000};
+  struct event ev;
   int ret = ::connect(sockfd, addr, addrlen);
   if (EINPROGRESS == errno) {
-    if (!ev) ev = event_new(NULL, -1, 0, NULL, NULL);
-    event_assign(ev, base, sockfd, EV_WRITE, SocketReadable, ev);
-    event_add(ev, &timeout);  // add timeout
+    event_assign(&ev, base, sockfd, EV_WRITE, SocketReadOrWrite, &ev);
+    event_add(&ev, NULL);  // add timeout
     io_wait_map_[sockfd] = running_thread_;
     running_thread_->Schedule();
     running_thread_->SetState(Thread::TS_STOP);
     Schedule();
 
-    if (ev->ev_res & EV_TIMEOUT) {
+    if (ev.ev_res & EV_TIMEOUT) {
       return -1;
-    } else if (ev->ev_res != EV_WRITE) {
+    } else if (ev.ev_res != EV_WRITE) {
       return -1;
     }
   } else {
@@ -250,7 +250,7 @@ int Frame::connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 }
 
 int Frame::send(int sockfd, const void *buf, size_t len, int flags) {
-  struct event *ev = NULL;
+  struct event ev;
   size_t nsend = 0;
   while (nsend < len) {
     int ret =
@@ -258,18 +258,17 @@ int Frame::send(int sockfd, const void *buf, size_t len, int flags) {
     if (ret > 0) {
       nsend += ret;
     } else if (ret < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-      if (!ev) ev = event_new(NULL, -1, 0, NULL, NULL);
-      event_assign(ev, base, sockfd, EV_WRITE, SocketReadable, ev);
-      event_add(ev, NULL);  // add timeout
+      event_assign(&ev, base, sockfd, EV_WRITE, SocketReadOrWrite, &ev);
+      event_add(&ev, NULL);
       io_wait_map_[sockfd] = running_thread_;
       running_thread_->Schedule();
       running_thread_->SetState(Thread::TS_STOP);
       Schedule();
 
-      if (ev->ev_res & EV_TIMEOUT) {
+      if (ev.ev_res & EV_TIMEOUT) {
         return -2;
         break;
-      } else if (ev->ev_res & EV_WRITE) {
+      } else if (ev.ev_res & EV_WRITE) {
         continue;
       }
       return -1;
@@ -285,7 +284,7 @@ int Frame::send(int sockfd, const void *buf, size_t len, int flags) {
 
 int Frame::recv(int sockfd, void *buf, size_t len, int flags) {
   size_t recvd = 0;
-  struct event *ev = NULL;
+  struct event ev;
   while (true) {
     int ret = ::recv(sockfd, buf, len, flags);
     if (ret > 0) {
@@ -294,17 +293,16 @@ int Frame::recv(int sockfd, void *buf, size_t len, int flags) {
     } else if (0 == ret) {  // reset by peer
       return 0;
     } else if (ret < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-      if (!ev) ev = event_new(NULL, -1, 0, NULL, NULL);
-      event_assign(ev, base, sockfd, EV_READ, SocketReadable, ev);
-      event_add(ev, NULL);  // add timeout
+      event_assign(&ev, base, sockfd, EV_READ, SocketReadOrWrite, &ev);
+      event_add(&ev, NULL);
       io_wait_map_[sockfd] = running_thread_;
       running_thread_->Schedule();
       running_thread_->SetState(Thread::TS_STOP);
       Schedule();
 
-      if (ev->ev_res & EV_TIMEOUT) {
+      if (ev.ev_res & EV_TIMEOUT) {
         return -2;  // return timeout errcode
-      } else if (ev->ev_res & EV_READ) {
+      } else if (ev.ev_res & EV_READ) {
         continue;
       }
       return -1;
@@ -320,24 +318,23 @@ int Frame::sendto(int sockfd, const void *buf, size_t len, int flags,
 
 ssize_t Frame::recvfrom(int sockfd, void *buf, size_t len, int flags,
                         struct sockaddr *src_addr, socklen_t *addrlen) {
-  struct event *ev = NULL;
+  struct event ev;
   int ret = 0;
   while (true) {
     if ((ret = ::recvfrom(sockfd, buf, len, 0, (struct sockaddr *)src_addr,
                           addrlen)) < 0) {
 
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        if (!ev) ev = event_new(NULL, -1, 0, NULL, NULL);
-        event_assign(ev, base, sockfd, EV_READ, SocketReadable, ev);
-        event_add(ev, NULL);  // add timeout
+        event_assign(&ev, base, sockfd, EV_READ, SocketReadOrWrite, &ev);
+        event_add(&ev, NULL);
         io_wait_map_[sockfd] = running_thread_;
         running_thread_->Schedule();
         running_thread_->SetState(Thread::TS_STOP);
         Schedule();
 
-        if (ev->ev_res & EV_TIMEOUT) {
+        if (ev.ev_res & EV_TIMEOUT) {
           break;
-        } else if (ev->ev_res & EV_READ) {
+        } else if (ev.ev_res & EV_READ) {
           continue;
         }
         break;
@@ -350,11 +347,10 @@ ssize_t Frame::recvfrom(int sockfd, void *buf, size_t len, int flags,
     }
   }
 
-  if (ev) event_free(ev);
-
   return 0;
 }
-void Frame::SocketReadable(int fd, short events, void *arg) {
+
+void Frame::SocketReadOrWrite(int fd, short events, void *arg) {
   if (events & EV_TIMEOUT) {
     int ret = event_del(static_cast<event *>(arg));
   }
