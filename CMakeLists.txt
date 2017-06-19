@@ -38,10 +38,18 @@ add_executable(http_server
     ./http/http_request.cc
     ./http/http_response.cc)
 
+add_executable(dns_test
+    ./test/dns/main.cc
+    frame.cc  
+    thread.cc
+    ./dns/dns_resolve_impl.cc)
+
 include_directories(
     ./
     ./http/
-    ./third-party/http-parser)
+    ./dns/
+    ./third-party/http-parser
+    ./third-party/c-ares/)
 
 target_link_libraries(udp_client
     libevent.a -lrt)
@@ -54,3 +62,6 @@ target_link_libraries(http_client
     z
     rt
     /usr/lib64/libssl.so)
+
+target_link_libraries(dns_test
+    libevent.a -lrt ${PROJECT_DIR}/third-party/c-ares/lib/libcares_static.a)

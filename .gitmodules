@@ -4,3 +4,6 @@
 [submodule "third-party/libevent"]
 	path = third-party/libevent
 	url = https://github.com/libevent/libevent.git
+[submodule "third-party/c-ares"]
+	path = third-party/c-ares
+	url = https://github.com/c-ares/c-ares.git

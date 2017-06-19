@@ -129,7 +129,7 @@ int Frame::EventLoop(const timeval &tv) {
 int Frame::UdpSendAndRecv(const std::string &sendbuf,
                           struct sockaddr_in &dest_addr, std::string *recvbuf) {
   int ret = 0;
-  char recvbuf_[2048] = {0};
+  char recvbuf_[65536] = {0};
   auto recvlen = sizeof(recvbuf_);
   int fd = socket(AF_INET, SOCK_DGRAM, 0);
   int flags = fcntl(fd, F_GETFL, 0);
@@ -143,7 +143,7 @@ int Frame::UdpSendAndRecv(const std::string &sendbuf,
   }
 
   socklen_t sockaddr_len = sizeof(dest_addr);
-  if ((ret = recvfrom(fd, recvbuf_, sizeof(recvbuf), 0,
+  if ((ret = recvfrom(fd, recvbuf_, sizeof(recvbuf_), 0,
                       (struct sockaddr *)&dest_addr, &sockaddr_len)) < 0) {
     if (errno == EAGAIN || errno == EWOULDBLOCK)
       return -2;
@@ -349,7 +349,7 @@ ssize_t Frame::recvfrom(int sockfd, void *buf, size_t len, int flags,
     }
   }
 
-  return 0;
+  return ret;
 }
 
 void Frame::SocketReadOrWrite(int fd, short events, void *arg) {
