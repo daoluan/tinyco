@@ -58,6 +58,8 @@ int HttpSrvWork::Run() {
             // move left request to front
             if (recvd > nparsed) {
               req = req.substr(nparsed);
+            } else if (recvd == nparsed) {
+              recvd = 0;
             }
 
             continue;
