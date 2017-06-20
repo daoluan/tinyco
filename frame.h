@@ -3,7 +3,6 @@
 
 #include <inttypes.h>
 #include <unordered_map>
-#include <event2/event.h>
 #include <list>
 #include <vector>
 #include <memory>
@@ -13,6 +12,7 @@
 #include "thread.h"
 #include "work.h"
 #include "mutex.h"
+#include "event2/event.h"
 
 namespace tinyco {
 

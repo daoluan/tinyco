@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.8.9)
 set(CMAKE_VERBOSE_MAKEFILE on)
 SET(PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-SET(CMAKE_CXX_COMPILER /usr/local/bin/g++)
-SET(MYFLAG "-g -D__STDC_FORMAT_MACROS -std=c++11 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+SET(MYFLAG "-g -D__STDC_FORMAT_MACROS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
 add_definitions(${MYFLAG})
 
 project (tinco)
@@ -22,7 +22,6 @@ add_executable(http_client
     ./http/tcp_conn.cc
     ./http/http_request.cc
     ./http/http_response.cc
-    ./http/http_op.cc
     ./dns/dns_resolve_impl.cc
     ./frame.cc
     ./http/http_tool.cc
@@ -50,20 +49,20 @@ include_directories(
     ./http/
     ./dns/
     ./third-party/http-parser
+    ./third-party/libevent/include/
     ./third-party/c-ares/)
 
 target_link_libraries(udp_client
-    libevent.a -lrt)
+    ${PROJECT_DIR}/third-party/libevent/lib/libevent.a -lrt)
 
 target_link_libraries(http_server
-    libevent.a -lrt)
+    ${PROJECT_DIR}/third-party/libevent/lib/libevent.a -lrt)
 
 target_link_libraries(http_client
-    libevent.a -lrt
+    ${PROJECT_DIR}/third-party/libevent/lib/libevent.a
     z
-    rt
-    /usr/lib64/libssl.so
-    ${PROJECT_DIR}/third-party/c-ares/lib/libcares_static.a)
+    libssl.so
+    ${PROJECT_DIR}/third-party/c-ares/lib/libcares_static.a -lrt)
 
 target_link_libraries(dns_test
-    libevent.a -lrt ${PROJECT_DIR}/third-party/c-ares/lib/libcares_static.a)
+    ${PROJECT_DIR}/third-party/libevent/lib/libevent.a ${PROJECT_DIR}/third-party/c-ares/lib/libcares_static.a -lrt)
