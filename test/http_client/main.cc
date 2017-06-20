@@ -7,6 +7,7 @@
 #include "http_client.h"
 #include "http_request.h"
 #include "https_client.h"
+#include "dns_resolve_impl.h"
 
 using namespace tinyco;
 class TestWork : public Work {
@@ -15,10 +16,18 @@ class TestWork : public Work {
   virtual ~TestWork() {}
 
   int Run() {
+    dns::DNSResolverImpl dri;
+    dns::DNSResolver::IP ip = dri.Resolve("qq.com");
+    if (ip.af_inet_ip == 0) {
+      LOG("dns resolve error, check your dns config");
+      return 0;
+    }
+
     LOG("test http...");
+
     http::HttpClient hc;
     sockaddr_in addr;
-    inet_aton("220.181.57.217", &addr.sin_addr);
+    addr.sin_addr.s_addr = ip.af_inet_ip;
 
     int ret = hc.Init(addr.sin_addr.s_addr, 80);
     if (ret < 0) {
@@ -42,7 +51,7 @@ class TestWork : public Work {
 
     LOG("test https...");
     http::HttpsClient hsc;
-    inet_aton("220.181.57.217", &addr.sin_addr);
+    addr.sin_addr.s_addr = ip.af_inet_ip;
     ret = hsc.Init(addr.sin_addr.s_addr, 443);
     if (ret < 0) {
       LOG("ret=%d|%s", ret, hsc.GetErrorMsg().c_str());

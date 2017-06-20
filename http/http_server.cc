@@ -38,7 +38,7 @@ int HttpSrvWork::Run() {
         req.resize(req.size() * 2);
       }
 
-      int ret = Frame::recv(sockfd_, const_cast<char *>(req.data()),
+      int ret = Frame::recv(sockfd_, const_cast<char *>(req.data()) + recvd,
                             req.size() - recvd, 0);
       if (ret > 0) {
         recvd += ret;
@@ -48,11 +48,9 @@ int HttpSrvWork::Run() {
         if (nparsed > 0) {
           // process pkg
           HttpParserImpl hpi;
-          LOG("http request = %s", req.c_str());
           ret = hpi.ParseHttpRequest(req.substr(0, nparsed), &hreq_);
 
           if (0 == ret) {
-            LOG("parse request ok");
             Serve();
 
             // move left request to front
@@ -62,7 +60,11 @@ int HttpSrvWork::Run() {
               recvd = 0;
             }
 
-            continue;
+            if (hreq_.KeepAlive()) {
+              continue;
+            }
+            break;
+
           } else {  // parse error
             LOG("fail to parse request: %d", ret);
             return -__LINE__;
@@ -89,7 +91,6 @@ int HttpSrvWork::Reply() {
   std::string rsp;
   hrsp_.SerializeToString(&rsp);
 
-  LOG("http response = %s", rsp.c_str());
   return Frame::send(sockfd_, rsp.data(), rsp.size(), 0);
 }
 }

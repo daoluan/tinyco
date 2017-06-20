@@ -23,6 +23,7 @@ add_executable(http_client
     ./http/http_request.cc
     ./http/http_response.cc
     ./http/http_op.cc
+    ./dns/dns_resolve_impl.cc
     ./frame.cc
     ./http/http_tool.cc
     ./third-party/http-parser/http_parser.c)
@@ -61,7 +62,8 @@ target_link_libraries(http_client
     libevent.a -lrt
     z
     rt
-    /usr/lib64/libssl.so)
+    /usr/lib64/libssl.so
+    ${PROJECT_DIR}/third-party/c-ares/lib/libcares_static.a)
 
 target_link_libraries(dns_test
     libevent.a -lrt ${PROJECT_DIR}/third-party/c-ares/lib/libcares_static.a)

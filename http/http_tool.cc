@@ -5,6 +5,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include <algorithm>
 
 #include "http_parser.h"
 
@@ -97,6 +98,14 @@ int HttpParserImpl::ParseHttpRequest(const std::string &httpbuf,
       http_request->SetMethod(HttpRequest::HTTP_REQUEST_METHOD_UNKNOWN);
       break;
   }
+
+  if (http_request->IsHeader("Connection")) {
+    std::string keepalive = http_request->GetHeader("Connection");
+    std::transform(keepalive.begin(), keepalive.end(), keepalive.begin(),
+                   ::tolower);
+    if (keepalive == "keep-alive") http_request->SetKeepAlive(true);
+  }
+
   return 0;
 }
 
@@ -204,6 +213,33 @@ int HttpParserImpl::CheckHttp(const void *httpbuf, size_t size,
   } else {
     return HPC_UNKNOWN;
   }
+}
+
+int HttpParserImpl::ParseUrl(const std::string &s, URL *url) {
+  return ParseUrl(s.c_str(), s.size(), url);
+}
+
+int HttpParserImpl::ParseUrl(const char *s, size_t slen, URL *url) {
+  struct http_parser_url hpurl;
+  int ret = http_parser_parse_url(s, slen, 0, &hpurl);
+  if (ret < 0) return -1;
+
+#define has_and_set(field, member)                               \
+  if (hpurl.field_set & (1 << UF_##field))                       \
+    printf("sdkfsdfdsf\n"),                                      \
+        url->member.assign(&s[hpurl.field_data[UF_##field].off], \
+                           hpurl.field_data[UF_##field].len);
+
+  has_and_set(SCHEMA, schema);
+  has_and_set(HOST, host);
+  has_and_set(PORT, port);
+  has_and_set(PATH, path);
+  has_and_set(QUERY, query);
+  has_and_set(FRAGMENT, fragment);
+  has_and_set(USERINFO, userinfo);
+
+#undef has_and_set
+  return 0;
 }
 }
 }

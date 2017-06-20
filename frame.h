@@ -167,6 +167,20 @@ class TcpSrvWork : public Work {
 
       socklen_t socklen = sizeof(client);
       auto fd = Frame::accept(listenfd, (struct sockaddr *)&client, &socklen);
+      if (fd < 0) {
+        LOG("Frame::accept error: ret=%d", fd);
+        return -__LINE__;
+      }
+
+      auto flags = fcntl(fd, F_GETFL, 0);
+      if (flags < 0) {
+        LOG("fcntl get error");
+        return -__LINE__;
+      }
+
+      flags = flags | O_NONBLOCK;
+      fcntl(fd, F_SETFL, flags);
+
       auto w = new W;
       w->SetFd(fd);
       if (fd < 0) {

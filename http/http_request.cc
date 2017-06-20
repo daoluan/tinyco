@@ -7,7 +7,8 @@
 namespace tinyco {
 namespace http {
 
-HttpRequest::HttpRequest() : method_(HTTP_REQUEST_METHOD_UNKNOWN) {}
+HttpRequest::HttpRequest()
+    : method_(HTTP_REQUEST_METHOD_UNKNOWN), keepalive_(false) {}
 
 HttpRequest::~HttpRequest() {}
 

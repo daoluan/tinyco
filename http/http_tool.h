@@ -31,6 +31,9 @@ class HttpParser {
                                        HttpRequest *http_request,
                                        uint32_t *nparsed) = 0;
 
+  virtual int ParseUrl(const std::string &s, URL *url) = 0;
+  virtual int ParseUrl(const char *s, size_t slen, URL *url) = 0;
+
   // 解析 http 响应
   // 成功返回 0；失败返回 -1
   virtual int ParseHttpResponse(const std::string &httpbuf,
@@ -64,6 +67,9 @@ class HttpParserImpl : public HttpParser {
   // 成功返回 0；失败返回 -1
   virtual int ParseHttpResponse(const std::string &httpbuf,
                                 HttpResponse *http_response);
+
+  virtual int ParseUrl(const std::string &s, URL *url);
+  virtual int ParseUrl(const char *s, size_t slen, URL *url);
 
   virtual int CheckHttp(const std::string &httpbuf);
   virtual int CheckHttp(const std::string &httpbuf, size_t *szparsed);

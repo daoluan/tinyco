@@ -8,6 +8,16 @@
 namespace tinyco {
 namespace http {
 
+struct URL {
+  std::string schema;
+  std::string host;
+  std::string port;
+  std::string path;
+  std::string query;
+  std::string fragment;
+  std::string userinfo;
+};
+
 class HttpRequest {
  public:
   HttpRequest();
@@ -16,7 +26,9 @@ class HttpRequest {
   void SetUri(const std::string &url);
   void SetHeader(const std::string &field, const std::string &value);
   int GetMethod() const { return method_; }
-  std::string GetUrl() const { return uri_; }
+  std::string GetUri() const { return uri_; }
+  void SetKeepAlive(bool b) { keepalive_ = b; }
+  bool KeepAlive() const { return keepalive_; }
 
   std::string GetHeader(const std::string &header) const {
     std::tr1::unordered_map<std::string, std::string>::const_iterator cit =
@@ -53,6 +65,7 @@ class HttpRequest {
   std::string uri_;
   std::string content_;
   std::tr1::unordered_map<std::string, std::string> headers_;
+  bool keepalive_;
 };
 }
 }
