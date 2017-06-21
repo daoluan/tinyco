@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 SET(MYFLAG "-g -D__STDC_FORMAT_MACROS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
 add_definitions(${MYFLAG})
 
-project (tinco)
+project (tinyco)
 add_executable(udp_client
     ./test/udp_client/main.cc
     frame.cc
