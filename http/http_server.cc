@@ -89,6 +89,8 @@ int HttpSrvWork::Run() {
 
 int HttpSrvWork::Reply() {
   std::string rsp;
+  if (hreq_.IsHeader("Connection"))
+    hrsp_.SetHeader("Connection", hreq_.GetHeader("Connection"));
   hrsp_.SerializeToString(&rsp);
 
   return Frame::send(sockfd_, rsp.data(), rsp.size(), 0);
