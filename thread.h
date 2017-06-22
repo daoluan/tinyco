@@ -2,7 +2,6 @@
 #define THREAD_H_
 
 #include <ucontext.h>
-#include "work.h"
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
@@ -63,9 +62,9 @@ class Thread {
   typedef void (*ContextFun)();
   void SetContext(BeginFrom func, void *argc);
 
-  void Pending(uint64_t ms) { pending_duration_ = ms; }
+  void Pending(uint64_t ms) { wakeup_ts_ = ms; }
 
-  uint64_t GetPendingDuration() const { return pending_duration_; }
+  uint64_t GetWakeupTime() const { return wakeup_ts_; }
 
  private:
   BeginFrom fun_;
@@ -74,7 +73,7 @@ class Thread {
   ucontext_t uc_;
   int thread_id_;
   Thread *parent_;
-  uint64_t pending_duration_;
+  uint64_t wakeup_ts_;
 };
 }
 

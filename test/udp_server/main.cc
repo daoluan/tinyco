@@ -1,34 +1,34 @@
 /* Sample UDP server */
 
+#include <assert.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
-int main(int argc, char**argv) {
-  int sockfd, n;
-  struct sockaddr_in servaddr, cliaddr = { 0 };
-  socklen_t len;
-  char msg[2048] = { 0 };
+#include "frame.h"
 
-  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+using namespace tinyco;
 
-  bzero(&servaddr, sizeof(servaddr));
-  servaddr.sin_family = AF_INET;
-  servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  servaddr.sin_port = htons(32000);
-  bind(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+class TestWork : public UdpReqWork {
+ public:
+  TestWork() {}
+  virtual ~TestWork() {}
 
-  for (;;) {
-    len = sizeof(cliaddr);
-    n = recvfrom(sockfd, msg, sizeof(msg), 0, (struct sockaddr *) &cliaddr,
-                 &len);
-    printf("server recv msg: %s(%d)\n", msg, n);
+  int Run() {
+    LOG("new udp req: %s|response after 10s", req_.reqpkg.c_str());
 
-    sleep(1);  // intended
+    Frame::Sleep(10000);
 
-    n = sendto(sockfd, msg, n, 0, (struct sockaddr *) &cliaddr, len);
-    printf("response to client: ret = %d\n", n);
+    LOG("rsp to client");
+    Reply(req_.reqpkg);
   }
+};
+
+int main(int argc, char **argv) {
+  assert(Frame::Init());
+  Frame::UdpSrv<TestWork>(0, 32000);
+  Frame::Fini();
+  return 0;
 }

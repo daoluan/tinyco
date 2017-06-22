@@ -24,7 +24,7 @@ uint64_t Frame::last_loop_ts_ = 0;
 
 struct ThreadPendingTimeComp {
   bool operator()(Thread *&a, Thread *&b) {
-    return a->GetPendingDuration() < b->GetPendingDuration();
+    return a->GetWakeupTime() < b->GetWakeupTime();
   }
 };
 
@@ -90,7 +90,7 @@ void Frame::WakeupPendingThread() {
   if (!thread_pending_.empty()) {
     auto n = *thread_pending_.begin();
     auto sz = thread_pending_.size();
-    while (sz-- && n->GetPendingDuration() >= nowms) {
+    while (sz-- && n->GetWakeupTime() <= nowms) {
       n = PopPendingTop();
       n->Pending(0);
       n->SetState(Thread::TS_RUNNABLE);
@@ -108,15 +108,14 @@ timeval Frame::GetEventLoopTimeout() {
     auto mint = *thread_pending_.begin();
 
     // thread need to be wake up
-    if (mint->GetPendingDuration() < nowms) {
+    if (mint->GetWakeupTime() < nowms) {
       timeout.tv_usec = 0;
       return timeout;
     }
 
-    timeout.tv_sec = (mint->GetPendingDuration() - nowms) / 1000llu;
-    timeout.tv_usec =
-        (mint->GetPendingDuration() - nowms - timeout.tv_sec * 1000llu) *
-        1000llu;
+    int delta = mint->GetWakeupTime() - nowms;
+    timeout.tv_sec = delta / 1000llu;
+    timeout.tv_usec = (delta - timeout.tv_sec * 1000llu) * 1000llu;
   }
   return timeout;
 }

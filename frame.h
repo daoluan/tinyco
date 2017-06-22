@@ -55,6 +55,9 @@ class Frame {
   template <class W>
   static int TcpSrv(uint32_t ip, uint16_t port);
 
+  template <class W>
+  static int UdpSrv(uint32_t ip, uint16_t port);
+
  private:
   static void SocketReadOrWrite(int fd, short events, void *arg);
   static int MainThreadLoop(void *arg);
@@ -100,7 +103,7 @@ class TcpSrvWork : public Work {
     int ret = RunTcpSrv();
     if (ret < 0) {
       LOG("server error: %d", ret);
-      exit(1);
+      exit(EXIT_FAILURE);
     }
   }
 
@@ -197,9 +200,118 @@ class TcpSrvWork : public Work {
   uint16_t port_;
 };
 
+struct UdpReqInfo {
+  uint32_t sockfd;
+  std::string reqpkg;
+  sockaddr_in srcaddr;
+  sockaddr_in dstaddr;
+};
+
+class UdpReqWork : public Work {
+ public:
+  UdpReqWork() {}
+  virtual ~UdpReqWork() {}
+  void SetReqInfo(const UdpReqInfo &req) { req_ = req; }
+  int Run() = 0;
+  int Reply(const std::string &rsp) {
+    return Frame::sendto(req_.sockfd, rsp.data(), rsp.size(), 0,
+                         (sockaddr *)&req_.srcaddr, sizeof(req_.srcaddr));
+  }
+
+ protected:
+  UdpReqInfo req_;
+};
+
+template <class W>
+class UdpSrvWork : public Work {
+ public:
+  UdpSrvWork(uint32_t ip, uint16_t port) : ip_(ip), port_(port) {}
+  virtual ~UdpSrvWork() {}
+  int Run() {
+    int ret = RunUdpSrv();
+    if (ret < 0) {
+      LOG("server error: %d", ret);
+      exit(EXIT_FAILURE);
+    }
+  }
+
+ private:
+  int RunUdpSrv() {
+    auto listenfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (listenfd < 0) {
+      LOG("socket error");
+      return -__LINE__;
+    }
+
+    defer d([=] { close(listenfd); });
+
+    struct sockaddr_in server, client;
+    socklen_t clisocklen;
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = ip_;
+    server.sin_port = htons(port_);
+    clisocklen = sizeof(client);
+
+    auto flags = fcntl(listenfd, F_GETFL, 0);
+    if (flags < 0) {
+      LOG("fcntl get error");
+      return -__LINE__;
+    }
+
+    flags = flags | O_NONBLOCK;
+    fcntl(listenfd, F_SETFL, flags);
+
+    int enable = 1;
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) <
+        0) {
+      LOG("fail to setsockopt(SO_REUSEADDR)");
+      return -__LINE__;
+    }
+
+    if (bind(listenfd, (struct sockaddr *)&server, sizeof(server)) < 0) {
+      LOG("bind error");
+      return -__LINE__;
+    }
+
+    char recvbuf[65536];
+
+    while (true) {
+      int ret = Frame::recvfrom(listenfd, recvbuf, sizeof(recvbuf), 0,
+                                (struct sockaddr *)&client, &clisocklen);
+      if (ret > 0) {
+        // create tread to handle request
+        UdpReqInfo req;
+        req.srcaddr = client;
+        req.dstaddr = server;
+        req.reqpkg.assign(recvbuf, ret);
+        req.sockfd = listenfd;
+
+        auto w = new W();
+        w->SetReqInfo(req);
+
+        Frame::CreateThread(w);
+      } else if (ret < 0) {
+        LOG("Frame::recvfrom error: %d", ret);
+        return -__LINE__;
+      }
+    }
+
+    return 0;
+  }
+
+  uint32_t ip_;
+  uint16_t port_;
+};
+
 template <class W>
 int Frame::TcpSrv(uint32_t ip, uint16_t port) {
   Frame::CreateThread(new TcpSrvWork<W>(ip, port));
+  Frame::Schedule();
+}
+
+template <class W>
+int Frame::UdpSrv(uint32_t ip, uint16_t port) {
+  Frame::CreateThread(new UdpSrvWork<W>(ip, port));
   Frame::Schedule();
 }
 }

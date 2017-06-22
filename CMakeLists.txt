@@ -12,7 +12,9 @@ add_executable(udp_client
     thread.cc)
 
 add_executable(udp_server
-    ./test/udp_server/main.cc)
+    ./test/udp_server/main.cc
+    frame.cc
+    thread.cc)
 
 add_executable(http_client
     ./test/http_client/main.cc
@@ -53,6 +55,9 @@ include_directories(
     ./third-party/c-ares/)
 
 target_link_libraries(udp_client
+    ${PROJECT_DIR}/third-party/libevent/lib/libevent.a -lrt)
+
+target_link_libraries(udp_server
     ${PROJECT_DIR}/third-party/libevent/lib/libevent.a -lrt)
 
 target_link_libraries(http_server
