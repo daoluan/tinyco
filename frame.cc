@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <memory>
 
+#include "util/time.h"
+
 namespace tinyco {
 
 std::unordered_map<int, Thread *> Frame::io_wait_map_;  // wait on io
@@ -55,15 +57,6 @@ bool Frame::Fini() {
 
   event_base_free(base);
   return true;
-}
-
-uint64_t mstime() {
-  struct timeval tv;
-
-  gettimeofday(&tv, NULL);
-
-  return (unsigned long long)(tv.tv_sec) * 1000 +
-         (unsigned long long)(tv.tv_usec) / 1000;
 }
 
 int Frame::MainThreadLoop(void *arg) {
@@ -406,7 +399,7 @@ int Frame::Schedule() {
 
 void Frame::Sleep(uint32_t ms) {
   if (running_thread_) {
-    running_thread_->Pending(mstime() + ms);
+    running_thread_->Pending(time::mstime() + ms);
     running_thread_->SetState(Thread::TS_STOP);
     thread_pending_.push_back(running_thread_);
     running_thread_->Schedule();
@@ -422,5 +415,5 @@ void Frame::PendThread(Thread *t) {
             ThreadPendingTimeComp());
 }
 
-void Frame::UpdateLoopTimestamp() { last_loop_ts_ = mstime(); }
+void Frame::UpdateLoopTimestamp() { last_loop_ts_ = time::mstime(); }
 }

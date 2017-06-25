@@ -13,6 +13,7 @@
 #include "work.h"
 #include "mutex.h"
 #include "event2/event.h"
+#include "util/defer.h"
 
 namespace tinyco {
 
@@ -85,14 +86,6 @@ class Frame {
   static uint64_t last_loop_ts_;
 };
 
-class defer {
-  std::function<void()> t;
-
- public:
-  defer(std::function<void()> &&t) : t(t) {}
-  ~defer() { t(); }
-};
-
 template <class W>
 class TcpSrvWork : public Work {
  public:
@@ -115,7 +108,7 @@ class TcpSrvWork : public Work {
       return -__LINE__;
     }
 
-    defer d([=] { close(listenfd); });
+    util::defer d([=] { close(listenfd); });
 
     struct sockaddr_in server, client;
     server.sin_family = AF_INET;
@@ -243,7 +236,7 @@ class UdpSrvWork : public Work {
       return -__LINE__;
     }
 
-    defer d([=] { close(listenfd); });
+    util::defer d([=] { close(listenfd); });
 
     struct sockaddr_in server, client;
     socklen_t clisocklen;
