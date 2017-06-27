@@ -226,7 +226,6 @@ int HttpParserImpl::ParseUrl(const char *s, size_t slen, URL *url) {
 
 #define has_and_set(field, member)                               \
   if (hpurl.field_set & (1 << UF_##field))                       \
-    printf("sdkfsdfdsf\n"),                                      \
         url->member.assign(&s[hpurl.field_data[UF_##field].off], \
                            hpurl.field_data[UF_##field].len);
 
