@@ -1,7 +1,5 @@
 #include <arpa/inet.h>
 #include <assert.h>
-#include <iostream>
-#include <fcntl.h>
 
 #include "frame.h"
 

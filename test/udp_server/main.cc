@@ -1,11 +1,4 @@
-/* Sample UDP server */
-
 #include <assert.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 
 #include "frame.h"
 

@@ -1,8 +1,3 @@
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string>
-
 #include "frame.h"
 #include "http_client.h"
 #include "http_request.h"
