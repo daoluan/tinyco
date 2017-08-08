@@ -19,30 +19,30 @@ SET(COMMON_STATIC_LIB
 
 project (tinyco)
 add_executable(udp_client
-    ./test/udp_client/main.cc
+    ./example/udp_client/main.cc
     ${TINYCO_CORE_CC})
 
 add_executable(udp_server
-    ./test/udp_server/main.cc
+    ./example/udp_server/main.cc
     ${TINYCO_CORE_CC})
 
 add_executable(http_client
-    ./test/http_client/main.cc
+    ./example/http_client/main.cc
     ${TINYCO_CORE_CC}
     ${TINYCO_HTTP_CC})
 
 add_executable(http_server
-    ./test/http_server/main.cc
+    ./example/http_server/main.cc
     ${TINYCO_CORE_CC}
     ${TINYCO_HTTP_CC})
 
 add_executable(dns_test
-    ./test/dns/main.cc
+    ./example/dns/main.cc
     ${TINYCO_CORE_CC}
     ${TINYCO_HTTP_CC})
 
 add_executable(server
-    ./test/server/main.cc
+    ./example/server/main.cc
     ${TINYCO_CORE_CC} 
     ${TINYCO_HTTP_CC})
 

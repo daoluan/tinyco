@@ -13,6 +13,7 @@ addons:
 before_install:
   - cd ./third-party/c-ares/; cmake -DCARES_STATIC=ON .; make; cd -
   - cd ./third-party/libevent/; cmake .; make; cd -
+  - cd ./third-party/jsoncpp/; cmake .; make; cd -
   - export CXX="g++-6"
 install:
 script: cmake . && make
