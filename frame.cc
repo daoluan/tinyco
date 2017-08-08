@@ -1,4 +1,5 @@
 #include "frame.h"
+
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -18,10 +19,9 @@ std::unordered_map<int, Thread *> Frame::io_wait_map_;  // wait on io
 std::list<Thread *> Frame::thread_runnable_;
 std::list<Thread *> Frame::thread_free_;       // like memory pool
 std::vector<Thread *> Frame::thread_pending_;  // sleeping thread
-Thread *Frame::main_thread_;
-Thread *Frame::running_thread_;
-Thread *Frame::prunning_thread_;
-struct event_base *Frame::base;
+Thread *Frame::main_thread_ = NULL;
+Thread *Frame::running_thread_ = NULL;
+struct event_base *Frame::base = NULL;
 uint64_t Frame::last_loop_ts_ = 0;
 
 struct ThreadPendingTimeComp {
@@ -55,7 +55,7 @@ bool Frame::Fini() {
     delete (*it);
   }
 
-  event_base_free(base);
+  if (base) event_base_free(base);
   return true;
 }
 
@@ -366,6 +366,7 @@ void Frame::SocketReadOrWrite(int fd, short events, void *arg) {
 int HandleProcess(void *arg) {
   auto *w = static_cast<Work *>(arg);
   w->Run();
+  LOG_DEBUG("run ret=%d", w->Run());
   delete w;
 
   // recycle the thread

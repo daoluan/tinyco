@@ -11,11 +11,13 @@ namespace http {
 struct URL {
   std::string schema;
   std::string host;
-  std::string port;
+  uint32_t port;
   std::string path;
   std::string query;
   std::string fragment;
   std::string userinfo;
+
+  bool IsHttps() const { return 443 == port; }
 };
 
 class HttpRequest {

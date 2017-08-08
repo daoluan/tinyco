@@ -22,8 +22,8 @@ std::unordered_map<std::string, DNSResolverImpl::ResCache>
 static ares_channel channel;
 static bool ares_channel_init = false;
 
-DNSResolver::IP DNSResolverImpl::Resolve(const std::string &domain) {
-  DNSResolver::IP res;
+network::IP DNSResolverImpl::Resolve(const std::string &domain) {
+  network::IP res;
   res.af_inet_ip = 0;
   int ret = 0;
 

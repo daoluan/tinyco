@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "util/network.h"
+
 namespace tinyco {
 namespace dns {
 // not thread-safe
@@ -14,16 +16,16 @@ class DNSResolverImpl : public DNSResolver {
  public:
   DNSResolverImpl() {}
   virtual ~DNSResolverImpl() {}
-  virtual IP Resolve(const std::string &domain);
+  virtual network::IP Resolve(const std::string &domain);
 
  private:
   struct ResCache {
-    std::vector<IP> ip;
+    std::vector<network::IP> ip;
     uint32_t timeout;  // timeout unix timestmap
     uint32_t idx;      // return next time
 
-    IP PickOne() {
-      IP res;
+    network::IP PickOne() {
+      network::IP res;
       res.af_inet_ip = 0;
       if (ip.empty()) return res;
 

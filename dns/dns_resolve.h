@@ -6,7 +6,10 @@
 #include <inttypes.h>
 #include <string>
 
+#include "util/network.h"
+
 namespace tinyco {
+
 namespace dns {
 
 class DNSResolver {
@@ -14,12 +17,7 @@ class DNSResolver {
   DNSResolver() {}
   virtual ~DNSResolver() {}
 
-  union IP {
-    uint32_t af_inet_ip;
-    uint64_t af_inet6_ip;
-  };
-
-  virtual IP Resolve(const std::string &domain) = 0;
+  virtual network::IP Resolve(const std::string &domain) = 0;
 };
 }
 }

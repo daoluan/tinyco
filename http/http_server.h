@@ -1,4 +1,4 @@
-#include "frame.h"
+#include "server.h"
 #include "http_request.h"
 #include "http_response.h"
 
@@ -7,10 +7,8 @@
 namespace tinyco {
 namespace http {
 
-class HttpSrvWork : public Work {
+class HttpSrvWork : public TcpReqWork {
  public:
-  void SetFd(int sockfd) { sockfd_ = sockfd; }
-  virtual ~HttpSrvWork() { close(sockfd_); }
   virtual int Run();
   // implement you function
   virtual int Serve() = 0;
@@ -19,9 +17,6 @@ class HttpSrvWork : public Work {
  protected:
   HttpRequest hreq_;
   HttpResponse hrsp_;
-
- private:
-  int sockfd_;
 };
 }
 }

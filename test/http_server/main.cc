@@ -1,6 +1,6 @@
 #include <assert.h>
 
-#include "http_server.h"
+#include "http/http_server.h"
 
 using namespace tinyco;
 
@@ -16,9 +16,17 @@ class TestWork : public http::HttpSrvWork {
   }
 };
 
+class MyBuilder : public BusinessWorkBuilder {
+ public:
+  virtual TcpReqWork *BuildStreamBusinessWork(uint32_t port) {
+    return new TestWork();
+  }
+  virtual UdpReqWork *BuildUdpBusinessWork(uint32_t port) { return NULL; }
+};
+
 int main() {
   assert(Frame::Init());
-  Frame::TcpSrv<TestWork>(0, 8080);
+  TcpSrv(0, 8080, new MyBuilder());
   Frame::Fini();
   return 0;
 }

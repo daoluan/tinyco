@@ -1,8 +1,8 @@
-#include "frame.h"
-#include "http_client.h"
-#include "http_request.h"
-#include "https_client.h"
-#include "dns_resolve_impl.h"
+#include "server.h"
+#include "http/http_client.h"
+#include "http/http_request.h"
+#include "http/https_client.h"
+#include "dns/dns_resolve_impl.h"
 
 using namespace tinyco;
 class TestWork : public Work {
@@ -12,7 +12,7 @@ class TestWork : public Work {
 
   int Run() {
     dns::DNSResolverImpl dri;
-    dns::DNSResolver::IP ip = dri.Resolve("qq.com");
+    network::IP ip = dri.Resolve("qq.com");
     if (ip.af_inet_ip == 0) {
       LOG("dns resolve error, check your dns config");
       return 0;

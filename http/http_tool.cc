@@ -224,14 +224,17 @@ int HttpParserImpl::ParseUrl(const char *s, size_t slen, URL *url) {
   int ret = http_parser_parse_url(s, slen, 0, &hpurl);
   if (ret < 0) return -1;
 
-#define has_and_set(field, member)                               \
-  if (hpurl.field_set & (1 << UF_##field))                       \
-        url->member.assign(&s[hpurl.field_data[UF_##field].off], \
-                           hpurl.field_data[UF_##field].len);
+#define has_and_set(field, member)                           \
+  if (hpurl.field_set & (1 << UF_##field))                   \
+    url->member.assign(&s[hpurl.field_data[UF_##field].off], \
+                       hpurl.field_data[UF_##field].len);
 
   has_and_set(SCHEMA, schema);
   has_and_set(HOST, host);
-  has_and_set(PORT, port);
+
+  if (hpurl.field_set & (1 << UF_PORT))
+    url->port = std::stoul(std::string(&s[hpurl.field_data[UF_PORT].off],
+                                       hpurl.field_data[UF_PORT].len).c_str());
   has_and_set(PATH, path);
   has_and_set(QUERY, query);
   has_and_set(FRAGMENT, fragment);

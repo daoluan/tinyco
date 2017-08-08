@@ -1,6 +1,6 @@
 #include <assert.h>
 
-#include "frame.h"
+#include "server.h"
 
 using namespace tinyco;
 
@@ -19,9 +19,17 @@ class TestWork : public UdpReqWork {
   }
 };
 
+class MyBuilder : public BusinessWorkBuilder {
+ public:
+  virtual UdpReqWork *BuildUdpBusinessWork(uint32_t port) {
+    return new TestWork();
+  }
+  virtual TcpReqWork *BuildStreamBusinessWork(uint32_t port) { return NULL; }
+};
+
 int main(int argc, char **argv) {
   assert(Frame::Init());
-  Frame::UdpSrv<TestWork>(0, 32000);
+  UdpSrv(0, 32000, new MyBuilder());
   Frame::Fini();
   return 0;
 }

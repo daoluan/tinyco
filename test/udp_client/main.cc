@@ -1,7 +1,7 @@
 #include <arpa/inet.h>
 #include <assert.h>
 
-#include "frame.h"
+#include "server.h"
 
 using namespace tinyco;
 class TestWork : public Work {

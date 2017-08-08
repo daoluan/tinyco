@@ -6,7 +6,7 @@
 #include <string>
 #include <netinet/in.h>
 
-#include "dns_resolve_impl.h"
+#include "dns/dns_resolve_impl.h"
 
 using namespace tinyco;
 
