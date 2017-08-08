@@ -7,3 +7,6 @@
 [submodule "third-party/c-ares"]
 	path = third-party/c-ares
 	url = https://github.com/c-ares/c-ares.git
+[submodule "third-party/jsoncpp"]
+	path = third-party/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git
