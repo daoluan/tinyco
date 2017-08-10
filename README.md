@@ -8,9 +8,9 @@ tinyco is a framework with high performance and high efficiency focusing on busi
 
 - Make full use of CPU and process requests concurrently which makes server's throughput greatly improved
 - Perfect http/dns components
-- Small  kernel in size. Only need to link to small static library when using
+- Small kernel in size
 - Business code can be easy to read and maintain. No more async framework
 
 ## How to start ?
-See [test](https://github.com/daoluan/tinyco/tree/master/test).
+See [test](https://github.com/daoluan/tinyco/tree/master/example).
 

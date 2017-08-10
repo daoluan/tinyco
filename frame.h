@@ -7,7 +7,6 @@
 #include <set>
 #include <vector>
 #include <memory>
-#include <fcntl.h>
 #include <unistd.h>
 
 #include "thread.h"
@@ -55,7 +54,7 @@ class Frame {
   static void RecycleRunningThread();
 
   // it's very useful before mainloop of your program
-  static void InitHereAsNewThread() {
+  static Thread *InitHereAsNewThread() {
     auto t = new Thread();
     t->Init();
     t->Schedule();

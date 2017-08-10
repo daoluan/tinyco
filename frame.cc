@@ -55,6 +55,10 @@ bool Frame::Fini() {
     delete (*it);
   }
 
+  for (auto it = io_wait_map_.begin(); it != io_wait_map_.end();) {
+    delete (((it++)->second));
+  }
+
   if (base) event_base_free(base);
   return true;
 }
@@ -381,6 +385,8 @@ void Frame::RecycleRunningThread() {
 }
 
 int Frame::CreateThread(Work *w) {
+  // work will be deleted by HandleProcess()
+  // thread should not be deleted before deleting work
   auto *t = new Thread;
   t->Init();
   t->SetContext(HandleProcess, w);

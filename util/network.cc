@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h> /* for strncpy */
-
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -33,6 +33,21 @@ bool GetEthAddr(const char *eth, IP *ip) {
   ip->af_inet_ip = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
 
   return true;
+}
+
+int SetNonBlock(int fd) {
+  auto flags = fcntl(fd, F_GETFL, 0);
+  if (flags < 0) {
+    return flags;
+  }
+
+  flags = flags | O_NONBLOCK;
+  return fcntl(fd, F_SETFL, flags);
+}
+
+int SetReuseAddr(int fd) {
+  int enable = 1;
+  return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 }
 }
 }

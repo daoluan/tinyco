@@ -53,7 +53,7 @@ class TcpSrvWork : public Work {
   TcpSrvWork(Listener *listener, BusinessWorkBuilder *work_builder,
              ConnTracker *ct)
       : listener_(listener), work_builder_(work_builder), ct_(ct) {}
-  virtual ~TcpSrvWork() {}
+  virtual ~TcpSrvWork() { delete listener_; }
 
   int Run() {
     int ret = RunTcpSrv();
@@ -99,14 +99,10 @@ class TcpSrvWork : public Work {
 
       fm.Unlock();
 
-      auto flags = fcntl(fd, F_GETFL, 0);
-      if (flags < 0) {
-        LOG("fcntl get error");
+      if (network::SetNonBlock(fd) < 0) {
+        LOG_ERROR("set nonblock error");
         break;
       }
-
-      flags = flags | O_NONBLOCK;
-      fcntl(fd, F_SETFL, flags);
 
       if (!work_builder_) {
         close(fd);
@@ -160,7 +156,7 @@ class UdpSrvWork : public Work {
  public:
   UdpSrvWork(Listener *listener, BusinessWorkBuilder *work_builder)
       : listener_(listener), work_builder_(work_builder) {}
-  virtual ~UdpSrvWork() {}
+  virtual ~UdpSrvWork() { delete listener_; }
   int Run() {
     int ret = RunUdpSrv();
     if (ret < 0) {

@@ -39,7 +39,7 @@ class MyServer : public ServerImpl {
 
   virtual UdpReqWork *BuildUdpBusinessWork(uint32_t port) {
     LOG("my work builder: %d", port);
-    if (port == 123456) return new MyUdpReqWork();
+    if (123456 == port) return new MyUdpReqWork();
     return NULL;
   }
 };
@@ -52,4 +52,6 @@ int main() {
   }
 
   srv->Run();
+
+  return 0;
 }

@@ -32,19 +32,13 @@ int TcpListener::Listen(const network::IP &ip, uint16_t port) {
   server.sin_addr.s_addr = ip_.af_inet_ip;
   server.sin_port = htons(port_);
 
-  auto flags = fcntl(listenfd_, F_GETFL, 0);
-  if (flags < 0) {
-    LOG_ERROR("fcntl get error");
+  if (network::SetNonBlock(listenfd_) < 0) {
+    LOG_ERROR("set nonblock error");
     return -__LINE__;
   }
 
-  flags = flags | O_NONBLOCK;
-  fcntl(listenfd_, F_SETFL, flags);
-
-  int enable = 1;
-  if (setsockopt(listenfd_, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) <
-      0) {
-    LOG_ERROR("fail to setsockopt(SO_REUSEADDR)");
+  if (network::SetReuseAddr(listenfd_)) {
+    LOG("fail to setsockopt(SO_REUSEADDR)");
     return -__LINE__;
   }
 
@@ -78,19 +72,8 @@ int UdpListener::Listen(const network::IP &ip, uint16_t port) {
   server.sin_port = htons(port_);
   clisocklen = sizeof(client);
 
-  auto flags = fcntl(listenfd_, F_GETFL, 0);
-  if (flags < 0) {
-    LOG("fcntl get error");
-    return -__LINE__;
-  }
-
-  flags = flags | O_NONBLOCK;
-  fcntl(listenfd_, F_SETFL, flags);
-
-  int enable = 1;
-  if (setsockopt(listenfd_, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) <
-      0) {
-    LOG("fail to setsockopt(SO_REUSEADDR)");
+  if (network::SetNonBlock(listenfd_) < 0) {
+    LOG_ERROR("set nonblock error");
     return -__LINE__;
   }
 

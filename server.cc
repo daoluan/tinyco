@@ -25,7 +25,7 @@ Server *SignalHelper::srv_;
 
 ServerImpl::ServerImpl() {}
 
-ServerImpl::~ServerImpl() {}
+ServerImpl::~ServerImpl() { Frame::Fini(); }
 
 int ServerImpl::Initialize() {
   int ret = 0;
@@ -153,7 +153,7 @@ int ServerImpl::InitSrv() {
 }
 
 int ServerImpl::Run() {
-  Frame::InitHereAsNewThread();
+  std::shared_ptr<Thread> me(Frame::InitHereAsNewThread());
 
   while (true) {
     LOG_DEBUG("in server main loop");

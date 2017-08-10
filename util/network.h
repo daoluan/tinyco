@@ -13,6 +13,10 @@ union IP {
 };
 
 bool GetEthAddr(const char *eth, IP *ip);
+
+int SetNonBlock(int fd);
+
+int SetReuseAddr(int fd);
 }
 }
 #endif
