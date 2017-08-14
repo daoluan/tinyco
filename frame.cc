@@ -21,22 +21,25 @@ std::list<Thread *> Frame::thread_free_;       // like memory pool
 std::vector<Thread *> Frame::thread_pending_;  // sleeping thread
 Thread *Frame::main_thread_ = NULL;
 Thread *Frame::running_thread_ = NULL;
-struct event_base *Frame::base = NULL;
+struct event_base *Frame::base_ = NULL;
 uint64_t Frame::last_loop_ts_ = 0;
 
 struct ThreadPendingTimeComp {
-  bool operator()(Thread *&a, Thread *&b) {
-    return a->GetWakeupTime() < b->GetWakeupTime();
+  bool operator()(Thread *&a, Thread *&b) const {
+    return a->GetWakeupTime() > b->GetWakeupTime();
   }
 };
 
 bool Frame::Init() {
+  // avoid duplicate initialization
+  if (main_thread_ || base_) return false;
+
   auto m = new Thread;
   m->Init();
   m->SetContext(MainThreadLoop, NULL);
   main_thread_ = m;
 
-  base = event_base_new();
+  base_ = NULL;
   return true;
 }
 
@@ -59,7 +62,7 @@ bool Frame::Fini() {
     delete (((it++)->second));
   }
 
-  if (base) event_base_free(base);
+  if (base_) event_base_free(base_);
   return true;
 }
 
@@ -118,8 +121,8 @@ timeval Frame::GetEventLoopTimeout() {
 }
 
 int Frame::EventLoop(const timeval &tv) {
-  event_base_loopexit(base, &tv);
-  return event_base_loop(base, 0);
+  event_base_loopexit(GetEventBase(), &tv);
+  return event_base_loop(GetEventBase(), EVLOOP_ONCE);
 }
 
 int Frame::UdpSendAndRecv(const std::string &sendbuf,
@@ -207,9 +210,11 @@ int Frame::accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
   while (fd < 0) {
     fd = ::accept(sockfd, addr, addrlen);
     if (fd < 0) {
+      if (errno == EINTR) continue;
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
 
-        event_assign(&ev, base, sockfd, EV_READ, SocketReadOrWrite, &ev);
+        event_assign(&ev, GetEventBase(), sockfd, EV_READ, SocketReadOrWrite,
+                     &ev);
         event_add(&ev, NULL);
         io_wait_map_[sockfd] = running_thread_;
         running_thread_->Schedule();
@@ -226,22 +231,39 @@ int Frame::accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
 
 int Frame::connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
   struct event ev;
-  int ret = ::connect(sockfd, addr, addrlen);
-  if (EINPROGRESS == errno) {
-    event_assign(&ev, base, sockfd, EV_WRITE, SocketReadOrWrite, &ev);
-    event_add(&ev, NULL);  // add timeout
-    io_wait_map_[sockfd] = running_thread_;
-    running_thread_->Schedule();
-    running_thread_->SetState(Thread::TS_STOP);
-    Schedule();
+  int ret = 0;
+  while ((ret = ::connect(sockfd, addr, addrlen)) < 0) {
+    if (errno == EINTR) continue;
+    if (EINPROGRESS == errno || EADDRINUSE == errno) {
+      event_assign(&ev, GetEventBase(), sockfd, EV_WRITE, SocketReadOrWrite,
+                   &ev);
+      event_add(&ev, NULL);  // add timeout
+      io_wait_map_[sockfd] = running_thread_;
+      running_thread_->Schedule();
+      running_thread_->SetState(Thread::TS_STOP);
+      Schedule();
 
-    if (ev.ev_res & EV_TIMEOUT) {
-      return -1;
-    } else if (ev.ev_res != EV_WRITE) {
+      if (ev.ev_res & EV_TIMEOUT) {
+        return -1;
+      } else if (ev.ev_res != EV_WRITE) {
+        return -1;
+      }
+
+      int err = 0, n = 0;
+      if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, (char *)&err,
+                     (socklen_t *)&n) < 0) {
+        return -1;
+      }
+
+      if (err) {
+        errno = err;
+        return -1;
+      }
+
+      break;
+    } else {
       return -1;
     }
-  } else {
-    return -1;
   }
 
   return 0;
@@ -255,8 +277,12 @@ int Frame::send(int sockfd, const void *buf, size_t len, int flags) {
         ::send(sockfd, static_cast<const char *>(buf) + nsend, len - nsend, 0);
     if (ret > 0) {
       nsend += ret;
+    }
+    if (ret < 0 && errno == EINTR) {
+      continue;
     } else if (ret < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-      event_assign(&ev, base, sockfd, EV_WRITE, SocketReadOrWrite, &ev);
+      event_assign(&ev, GetEventBase(), sockfd, EV_WRITE, SocketReadOrWrite,
+                   &ev);
       event_add(&ev, NULL);
       io_wait_map_[sockfd] = running_thread_;
       running_thread_->Schedule();
@@ -273,7 +299,7 @@ int Frame::send(int sockfd, const void *buf, size_t len, int flags) {
     } else if (ret < 0) {
       return -1;
     } else if (0 == ret) {
-      return 0;
+      return 0;  // close by peer
     }
   }
 
@@ -292,9 +318,10 @@ int Frame::recv(int sockfd, void *buf, size_t len, int flags) {
     } else if (0 == ret) {  // reset by peer
       return 0;
     } else if (ret < 0) {
+      if (errno == EINTR) continue;
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        event_assign(&ev, base, sockfd, EV_READ | EV_CLOSED, SocketReadOrWrite,
-                     &ev);
+        event_assign(&ev, GetEventBase(), sockfd, EV_READ | EV_CLOSED,
+                     SocketReadOrWrite, &ev);
         event_add(&ev, NULL);
         io_wait_map_[sockfd] = running_thread_;
         running_thread_->Schedule();
@@ -334,9 +361,10 @@ ssize_t Frame::recvfrom(int sockfd, void *buf, size_t len, int flags,
     } else if (0 == ret) {
       return 0;
     } else if (ret < 0) {
+      if (errno == EINTR) continue;
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        event_assign(&ev, base, sockfd, EV_READ | EV_CLOSED, SocketReadOrWrite,
-                     &ev);
+        event_assign(&ev, GetEventBase(), sockfd, EV_READ | EV_CLOSED,
+                     SocketReadOrWrite, &ev);
         event_add(&ev, NULL);
         io_wait_map_[sockfd] = running_thread_;
         running_thread_->Schedule();
@@ -364,7 +392,7 @@ void Frame::SocketReadOrWrite(int fd, short events, void *arg) {
 
   thread_runnable_.push_back(io_wait_map_[fd]);
   io_wait_map_.erase(fd);
-  event_base_loopbreak(Frame::base);
+  event_base_loopbreak(Frame::base_);
 }
 
 int HandleProcess(void *arg) {
@@ -407,7 +435,7 @@ void Frame::Sleep(uint32_t ms) {
   if (running_thread_) {
     running_thread_->Pending(time::mstime() + ms);
     running_thread_->SetState(Thread::TS_STOP);
-    thread_pending_.push_back(running_thread_);
+    PendThread(running_thread_);
     running_thread_->Schedule();
     running_thread_ = NULL;
   }

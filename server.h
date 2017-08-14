@@ -28,6 +28,7 @@ class ConnTracker {
     conns_[fd] = conn;
   }
   void RemoveConn(int fd) { conns_.erase(fd); }
+  uint32_t GetConnSize() { return conns_.size(); }
 
  private:
   std::map<int, Conn> conns_;
@@ -68,21 +69,26 @@ class TcpSrvWork : public Work {
 
     // try to lock when multiprocss on
     auto masterpid = getpid();
-    FileMtx fm;
-    if (fm.OpenLockFile(std::string("/tmp/tinyco_lf_") +
-                        std::to_string(masterpid)) < 0) {
-      return -__LINE__;
+    AtomicMtx mtx;
+    if (mtx.InitMtx(NULL) < 0) return -__LINE__;
+
+    for (auto i = 0; i < 3; i++) {  // todo configurable
+      if (fork() > 0)               // child
+        break;
     }
 
-    // for (auto i = 0; i < 3; i++) {  // todo configurable
-    //   if (fork() > 0)               // child
-    //     break;
-    // }
-
+    int accepted = 0;
     while (true) {
-      if (fm.TryLock() < 0) {
+      // avoid thundering herd
+      if (accepted++ > 15) {
+        Frame::Sleep(50);
+        accepted = 0;
+        continue;
+      }
+
+      if (mtx.TryLock() < 0) {
         // lock error, schedule out
-        Frame::Sleep(500);
+        Frame::Sleep(50);
         continue;
       }
 
@@ -97,7 +103,7 @@ class TcpSrvWork : public Work {
         break;
       }
 
-      fm.Unlock();
+      mtx.Unlock();
 
       if (network::SetNonBlock(fd) < 0) {
         LOG_ERROR("set nonblock error");
@@ -169,11 +175,8 @@ class UdpSrvWork : public Work {
   int RunUdpSrv() {
     // try to lock when multiprocss on
     auto masterpid = getpid();
-    FileMtx fm;
-    if (fm.OpenLockFile(std::string("/tmp/tinyco_lf_") +
-                        std::to_string(masterpid)) < 0) {
-      return -__LINE__;
-    }
+    AtomicMtx mtx;
+    if (mtx.InitMtx(NULL) < 0) return -__LINE__;
 
     char recvbuf[65536];
 
@@ -182,7 +185,7 @@ class UdpSrvWork : public Work {
     server.sin_addr.s_addr = listener_->GetIP().af_inet_ip;
     server.sin_port = htons(listener_->GetPort());
     while (true) {
-      if (fm.TryLock() < 0) {
+      if (mtx.TryLock() < 0) {
         // lock error, schedule out
         Frame::Sleep(500);
         continue;
@@ -194,7 +197,7 @@ class UdpSrvWork : public Work {
           Frame::recvfrom(listener_->GetSocketFd(), recvbuf, sizeof(recvbuf), 0,
                           (struct sockaddr *)&client, &clisocklen);
       if (ret > 0) {
-        fm.Unlock();
+        mtx.Unlock();
 
         // create tread to handle request
         UdpReqInfo req;
@@ -250,6 +253,7 @@ class Server {
   virtual int Initialize() = 0;
   virtual int Run() = 0;
   virtual void SignalCallback(int signo) = 0;
+  virtual int Daemonize() = 0;
 
  protected:
   virtual int ServerLoop() = 0;
@@ -266,6 +270,7 @@ class ServerImpl : public Server,
   virtual void SignalCallback(int signo);
 
  private:
+  virtual int Daemonize();
   bool ParseConfig();
   virtual int ServerLoop();
   int InitSigAction();

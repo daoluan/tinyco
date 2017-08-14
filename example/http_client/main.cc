@@ -12,7 +12,8 @@ class TestWork : public Work {
 
   int Run() {
     dns::DNSResolverImpl dri;
-    network::IP ip = dri.Resolve("qq.com");
+    const std::string &domain = "baidu.com";
+    network::IP ip = dri.Resolve(domain);
     if (ip.af_inet_ip == 0) {
       LOG("dns resolve error, check your dns config");
       return 0;
@@ -33,6 +34,7 @@ class TestWork : public Work {
     http::HttpRequest hr;
     hr.SetMethod(http::HttpRequest::HTTP_REQUEST_METHOD_GET);
     hr.SetUri("/");
+    hr.SetHeader("Host", domain);
     std::string req, rsp;
     hr.SerializeToString(&req);
 
@@ -66,7 +68,7 @@ class TestWork : public Work {
 };
 
 int main() {
-  tinyco::Frame::Init();
+  Frame::Init();
   Frame::CreateThread(new TestWork);
   Frame::Schedule();
   Frame::Fini();

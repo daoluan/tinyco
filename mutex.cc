@@ -44,3 +44,35 @@ int FileMtx::Unlock() {
 
   return 0;
 }
+
+inline uint64_t AtomicCompareAndSet(uint64_t *a, uint64_t old, uint64_t n) {
+  u_char res;
+
+  __asm__ volatile(
+      "    cmpxchgq  %3, %1;   "
+      "    sete      %0;       "
+      : "=a"(res)
+      : "m"(*a), "a"(old), "r"(n)
+      : "cc", "memory");
+  return res;
+}
+
+AtomicMtx::~AtomicMtx() {
+  if (ptr_) munmap(ptr_, sizeof(*ptr_));
+}
+
+int AtomicMtx::InitMtx(void *arg) {
+  ptr_ = (uint64_t *)mmap(NULL, sizeof(uint64_t), PROT_READ | PROT_WRITE,
+                          MAP_ANON | MAP_SHARED, -1, 0);
+
+  *ptr_ = 0;
+  return 0;
+}
+
+int AtomicMtx::TryLock() {
+  return (*ptr_ == 0 && AtomicCompareAndSet(ptr_, 0, getpid())) ? 0 : -1;
+}
+
+int AtomicMtx::Unlock() {
+  return AtomicCompareAndSet(ptr_, getpid(), 0) ? 0 : -1;
+}

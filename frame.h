@@ -71,6 +71,10 @@ class Frame {
   static int EventLoop(const timeval &tv);
   static void UpdateLoopTimestamp();
   static uint64_t GetLastLoopTimestamp() { return last_loop_ts_; }
+  static event_base *GetEventBase() {
+    if (base_) return base_;
+    return (base_ = event_base_new());
+  }
 
   static std::unordered_map<int, Thread *> io_wait_map_;
   static std::list<Thread *> thread_runnable_;
@@ -78,7 +82,7 @@ class Frame {
   static std::vector<Thread *> thread_pending_;
   static Thread *main_thread_;
   static Thread *running_thread_;
-  static struct event_base *base;
+  static struct event_base *base_;
 
  private:
   Frame() {}

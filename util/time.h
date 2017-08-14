@@ -6,7 +6,7 @@
 namespace tinyco {
 namespace time {
 
-uint64_t mstime() {
+inline uint64_t mstime() {
   struct timeval tv;
 
   gettimeofday(&tv, NULL);

@@ -2,6 +2,8 @@
 #define MUTEX_H_
 
 #include <string>
+#include <sys/mman.h>
+#include <unistd.h>
 
 class Mutex {
  public:
@@ -17,6 +19,18 @@ class FileMtx : public Mutex {
 
  private:
   int fd_;
+};
+
+class AtomicMtx : public Mutex {
+ public:
+  int InitMtx(void *arg);
+  virtual ~AtomicMtx();
+
+  virtual int TryLock();
+  virtual int Unlock();
+
+ private:
+  uint64_t *ptr_;
 };
 
 #endif

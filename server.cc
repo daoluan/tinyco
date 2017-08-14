@@ -4,13 +4,14 @@
 #include <string>
 #include <fstream>
 #include <streambuf>
+#include <fcntl.h>
 
 #include "util/string.h"
 #include "http/http_server.h"
 
 namespace tinyco {
 
-class SignalHelper {
+class SignalHelper : public Work {
  public:
   static void SetServerInstance(Server *srv) { srv_ = srv; }
   static void AllInOneCallback(int sig, siginfo_t *sig_info, void *unused) {
@@ -26,6 +27,22 @@ Server *SignalHelper::srv_;
 ServerImpl::ServerImpl() {}
 
 ServerImpl::~ServerImpl() { Frame::Fini(); }
+
+int ServerImpl::Daemonize() {
+  int fd;
+
+  if (fork() != 0) exit(0);  // parent exits
+  setsid();                  // create a new session
+
+  if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
+    dup2(fd, STDIN_FILENO);
+    dup2(fd, STDOUT_FILENO);
+    dup2(fd, STDERR_FILENO);
+    if (fd > STDERR_FILENO) close(fd);  // if not, hold them
+  }
+
+  return 0;
+}
 
 int ServerImpl::Initialize() {
   int ret = 0;
@@ -98,7 +115,7 @@ struct ListenItem {
 
     this->proto = proto;
     network::IP ip;
-    if (!network::GetEthAddr(items[1].c_str(), &ip)) {
+    if (!network::GetEthAddr(items[0].c_str(), &ip)) {
       return false;
     }
 
@@ -149,6 +166,8 @@ int ServerImpl::InitSrv() {
     return -__LINE__;
   }
 
+  Daemonize();
+
   return 0;
 }
 
@@ -164,7 +183,7 @@ int ServerImpl::Run() {
   return 0;
 }
 
-int ServerImpl::ServerLoop() {}
+int ServerImpl::ServerLoop() { return 0; }
 
 void ServerImpl::SignalCallback(int signo) {
   if (signo == SIGUSR1) {

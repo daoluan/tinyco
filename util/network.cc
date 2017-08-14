@@ -49,5 +49,16 @@ int SetReuseAddr(int fd) {
   int enable = 1;
   return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 }
+
+std::string ntoa(const IP &ip) {
+  in_addr ia;
+  ia.s_addr = ip.af_inet_ip;
+  return inet_ntoa(ia);
+}
+
+std::string InetAddrToString(const sockaddr_in &addr) {
+  const std::string &ip = inet_ntoa(addr.sin_addr);
+  return ip + ":" + std::to_string(ntohs(addr.sin_port));
+}
 }
 }

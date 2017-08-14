@@ -29,59 +29,55 @@ int HttpSrvWork::Run() {
   req.resize(512);
   size_t recvd = 0;
 
+  HttpCheckPkg hcp;
+
   while (true) {
-    HttpCheckPkg hcp;
-
-    while (true) {
-      // grow up buffer size
-      if (recvd == req.size()) {
-        req.resize(req.size() * 2);
-      }
-
-      int ret = Frame::recv(sockfd_, const_cast<char *>(req.data()) + recvd,
-                            req.size() - recvd, 0);
-      if (ret > 0) {
-        recvd += ret;
-
-        // check pkg
-        int nparsed = hcp.CheckPkg(req.data(), recvd);
-        if (nparsed > 0) {
-          // process pkg
-          HttpParserImpl hpi;
-          ret = hpi.ParseHttpRequest(req.substr(0, nparsed), &hreq_);
-
-          if (0 == ret) {
-            Serve();
-
-            // move left request to front
-            if (recvd > nparsed) {
-              req = req.substr(nparsed);
-            } else if (recvd == nparsed) {
-              recvd = 0;
-            }
-
-            if (hreq_.KeepAlive()) {
-              continue;
-            }
-            break;
-
-          } else {  // parse error
-            LOG("fail to parse request: %d", ret);
-            return -__LINE__;
-          }
-        } else if (0 == nparsed) {  // continue to recv
-          continue;
-        } else if (nparsed < 0) {  // not http
-          return -__LINE__;
-        }
-      } else if (0 == ret)  // close by peer
-        return -__LINE__;
-      else if (ret < 0) {  // sys error!
-        return -__LINE__;
-      }
+    // grow up buffer size
+    if (recvd == req.size()) {
+      req.resize(req.size() * 2);
     }
 
-    return 0;
+    int ret = Frame::recv(sockfd_, const_cast<char *>(req.data()) + recvd,
+                          req.size() - recvd, 0);
+    if (ret > 0) {
+      recvd += ret;
+
+      // check pkg
+      int nparsed = hcp.CheckPkg(req.data(), recvd);
+      if (nparsed > 0) {
+        // process pkg
+        HttpParserImpl hpi;
+        ret = hpi.ParseHttpRequest(req.substr(0, nparsed), &hreq_);
+
+        if (0 == ret) {
+          Serve();
+
+          // move left request to front
+          if (recvd > nparsed) {
+            req = req.substr(nparsed);
+          } else if (recvd == nparsed) {
+            recvd = 0;
+          }
+
+          if (hreq_.KeepAlive()) {
+            continue;
+          }
+          break;
+
+        } else {  // parse error
+          LOG("fail to parse request: %d", ret);
+          return -__LINE__;
+        }
+      } else if (0 == nparsed) {  // continue to recv
+        continue;
+      } else if (nparsed < 0) {  // not http
+        return -__LINE__;
+      }
+    } else if (0 == ret)  // close by peer
+      return -__LINE__;
+    else if (ret < 0) {  // sys error!
+      return -__LINE__;
+    }
   }
 
   return 0;

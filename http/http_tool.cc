@@ -104,7 +104,9 @@ int HttpParserImpl::ParseHttpRequest(const std::string &httpbuf,
     std::transform(keepalive.begin(), keepalive.end(), keepalive.begin(),
                    ::tolower);
     if (keepalive == "keep-alive") http_request->SetKeepAlive(true);
-  }
+  } else
+    // keep alive in default
+    http_request->SetKeepAlive(true);
 
   return 0;
 }
