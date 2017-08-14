@@ -369,7 +369,6 @@ void Frame::SocketReadOrWrite(int fd, short events, void *arg) {
 
 int HandleProcess(void *arg) {
   auto *w = static_cast<Work *>(arg);
-  w->Run();
   LOG_DEBUG("run ret=%d", w->Run());
   delete w;
 
