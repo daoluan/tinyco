@@ -1,6 +1,7 @@
 #ifndef TINYCO_TIME_H_
 #define TINYCO_TIME_H_
 
+#include <sys/time.h>
 #include <time.h>
 
 namespace tinyco {

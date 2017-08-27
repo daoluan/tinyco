@@ -14,6 +14,7 @@
 #include "mutex.h"
 #include "event2/event.h"
 #include "util/defer.h"
+#include "util/time.h"
 #include "util/log.h"
 #include "listener.h"
 

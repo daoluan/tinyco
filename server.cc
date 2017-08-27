@@ -15,7 +15,26 @@ class SignalHelper : public Work {
  public:
   static void SetServerInstance(Server *srv) { srv_ = srv; }
   static void AllInOneCallback(int sig, siginfo_t *sig_info, void *unused) {
-    if (srv_) srv_->SignalCallback(sig);
+    LOG_DEBUG("write signal notify fd=%d|sig=%d", srv_->GetSigWriteFd(), sig);
+    int ret = Frame::send(srv_->GetSigWriteFd(), &sig, sizeof(sig), 0);
+    LOG_DEBUG("ret = %d", ret);
+  }
+
+  int Run() {
+    while (true) {
+      int signo = 0;
+      LOG_DEBUG("ready to recv signal notify fd=%d", srv_->GetSigReadFd());
+      int ret = Frame::recv(srv_->GetSigReadFd(), &signo, sizeof(signo), 0);
+      if (ret < 0) {
+        LOG_ERROR("read notifyfd_ error: ret=%d|socket=%d|error=%d", ret,
+                  srv_->GetSigReadFd(), errno);
+        return 0;
+      }
+
+      if (srv_) srv_->SignalCallback(signo);
+    }
+
+    return 0;
   }
 
  private:
@@ -46,20 +65,26 @@ int ServerImpl::Daemonize() {
 
 int ServerImpl::Initialize() {
   int ret = 0;
+  if (LocalLog::Instance()->Initialize("tinyco") < 0) {
+    fprintf(stderr, "fail init log util\n");
+    return -__LINE__;
+  }
+
   if (!Frame::Init()) {
     LOG_ERROR("fail to init frame");
     return -__LINE__;
   }
 
   if (!ParseConfig()) {
+    LOG_ERROR("fail to parse config");
     return -__LINE__;
   }
-  LOG_INFO("parse config ok");
 
-  LOG_INFO("init signal action");
-  InitSigAction();
+  if (InitSigAction() < 0) {
+    LOG_INFO("fail to init sigaction");
+    return -__LINE__;
+  }
 
-  LOG_INFO("init listener");
   if ((ret = InitSrv()) < 0) {
     LOG_INFO("fail to InitSrv: ret=%d", ret);
     return -__LINE__;
@@ -95,11 +120,30 @@ bool ServerImpl::ParseConfig() {
 }
 
 int ServerImpl::InitSigAction() {
+  SignalHelper::SetServerInstance(this);
   struct sigaction sa;
   sa.sa_sigaction = SignalHelper::AllInOneCallback;
   sa.sa_flags = 0;
   sigemptyset(&sa.sa_mask);
   sigaction(SIGUSR1, &sa, NULL);
+
+  int sockpair[2] = {0};
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair) == -1) {
+    printf("create unnamed socket pair failed:%s\n", strerror(errno));
+    exit(-1);
+  }
+
+  // 0 read
+  // 1 write
+  sig_read_fd_ = sockpair[0];
+  sig_write_fd_ = sockpair[1];
+  network::SetNonBlock(sig_read_fd_);
+  network::SetNonBlock(sig_write_fd_);
+  LOG_INFO("signal notify socket: read=%d|write=%d", sig_read_fd_,
+           sig_write_fd_);
+
+  Frame::CreateThread(new SignalHelper());
+  return 0;
 }
 
 struct ListenItem {
@@ -186,6 +230,7 @@ int ServerImpl::Run() {
 int ServerImpl::ServerLoop() { return 0; }
 
 void ServerImpl::SignalCallback(int signo) {
+  LOG_DEBUG("recv signo = %d", signo);
   if (signo == SIGUSR1) {
   }
 }

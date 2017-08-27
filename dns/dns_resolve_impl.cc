@@ -46,7 +46,7 @@ network::IP DNSResolverImpl::Resolve(const std::string &domain) {
 
   // check cache
   auto c = res_cache_.find(domain);
-  if (c != res_cache_.end() && c->second.timeout > time(NULL)) {
+  if (c != res_cache_.end() && c->second.timeout > time::mstime() / 1000llu) {
     return c->second.PickOne();
   }
 
@@ -82,7 +82,7 @@ network::IP DNSResolverImpl::Resolve(const std::string &domain) {
   }
 
   auto &n = res_cache_[domain];
-  n.timeout = time(NULL) + 5 * 60;
+  n.timeout = time::mstime() / 1000llu + 5 * 60;
   for (auto i = 0; ht->h_addr_list[i]; ++i) {
     res.af_inet_ip = *reinterpret_cast<uint32_t *>(ht->h_addr_list[i]);
     n.ip.push_back(res);

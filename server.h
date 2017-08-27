@@ -248,15 +248,21 @@ inline int UdpSrv(uint32_t ip, uint16_t port,
 
 class Server {
  public:
-  Server() {}
+  Server() : sig_read_fd_(-1), sig_write_fd_(-1) {}
   virtual ~Server() {}
   virtual int Initialize() = 0;
   virtual int Run() = 0;
   virtual void SignalCallback(int signo) = 0;
+  virtual int GetSigReadFd() const { return sig_read_fd_; }
+  virtual int GetSigWriteFd() const { return sig_write_fd_; }
   virtual int Daemonize() = 0;
 
  protected:
   virtual int ServerLoop() = 0;
+
+  // use to notify eventloop to do signal action
+  int sig_read_fd_;
+  int sig_write_fd_;
 };
 
 class ServerImpl : public Server,
