@@ -29,6 +29,10 @@ class ConnTracker {
   }
   void RemoveConn(int fd) { conns_.erase(fd); }
   uint32_t GetConnSize() { return conns_.size(); }
+  bool GracefulShutdown() const { return graceful_shutdown_; }
+
+ protected:
+  bool graceful_shutdown_;
 
  private:
   std::map<int, Conn> conns_;
@@ -125,6 +129,10 @@ class TcpSrvWork : public Work {
       }
 
       Frame::CreateThread(b);
+
+      if (ct_->GracefulShutdown()) {
+        break;
+      }
     }
 
     return 0;

@@ -222,6 +222,13 @@ int ServerImpl::Run() {
     LOG_DEBUG("in server main loop");
     Frame::Sleep(1000);
     ServerLoop();
+
+    if (GracefulShutdown()) {
+      if (GetConnSize() == 0) {
+        LOG_DEBUG("graceful shutdown");
+        break;
+      }
+    }
   }
 
   return 0;
@@ -231,7 +238,12 @@ int ServerImpl::ServerLoop() { return 0; }
 
 void ServerImpl::SignalCallback(int signo) {
   LOG_DEBUG("recv signo = %d", signo);
-  if (signo == SIGUSR1) {
+  switch (signo) {
+    case SIGUSR1:
+      break;
+    case SIGHUP:
+      graceful_shutdown_ = true;
+      break;
   }
 }
 

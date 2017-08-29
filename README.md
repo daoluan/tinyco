@@ -7,7 +7,7 @@ tinyco is a framework with **high performance and high efficiency** focusing on 
 - High performance. Make full use of CPU and process requests concurrently which makes server's throughput greatly improved
 - Perfect http/dns components
 - Small kernel in size
-- Business code can be easy to read and maintain. No more async framework
+- Business code can be easy to read and maintained. No more async framework
 
 # How to start ?
 Clone tinyco and build it:
