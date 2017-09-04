@@ -15,7 +15,7 @@ SET(COMMON_STATIC_LIB
     ${PROJECT_DIR}/third-party/libevent/lib/libevent.a 
     ${PROJECT_DIR}/third-party/c-ares/lib/libcares_static.a 
     ${PROJECT_DIR}/third-party/jsoncpp/src/lib_json/libjsoncpp.a   
-    -lrt z libssl.so)
+    -lrt z libssl.so libcrypto.so)
 
 project (tinyco)
 add_executable(udp_client
