@@ -1,6 +1,7 @@
 #ifndef SERVER_H_
 #define SERVER_H_
 
+#include <sys/sysinfo.h>
 #include <set>
 
 #include "frame.h"
@@ -70,14 +71,10 @@ class TcpSrvWork : public Work {
 
  private:
   int RunTcpSrv() {
+    int worker_num = get_nprocs() > 0 ? get_nprocs() - 1 : 0;
 
-    // try to lock when multiprocss on
-    auto masterpid = getpid();
-    AtomicMtx mtx;
-    if (mtx.InitMtx(NULL) < 0) return -__LINE__;
-
-    for (auto i = 0; i < 3; i++) {  // todo configurable
-      if (fork() > 0)               // child
+    for (auto i = 0; i < worker_num; i++) { 
+      if (fork() > 0)                        // child
         break;
     }
 
@@ -90,7 +87,7 @@ class TcpSrvWork : public Work {
         continue;
       }
 
-      if (mtx.TryLock() < 0) {
+      if (listener_->GetMtx()->TryLock() < 0) {
         // lock error, schedule out
         Frame::Sleep(50);
         continue;
@@ -107,7 +104,7 @@ class TcpSrvWork : public Work {
         break;
       }
 
-      mtx.Unlock();
+      listener_->GetMtx()->Unlock();
 
       if (network::SetNonBlock(fd) < 0) {
         LOG_ERROR("set nonblock error");
@@ -181,11 +178,6 @@ class UdpSrvWork : public Work {
 
  private:
   int RunUdpSrv() {
-    // try to lock when multiprocss on
-    auto masterpid = getpid();
-    AtomicMtx mtx;
-    if (mtx.InitMtx(NULL) < 0) return -__LINE__;
-
     char recvbuf[65536];
 
     sockaddr_in server = {0};
@@ -193,7 +185,7 @@ class UdpSrvWork : public Work {
     server.sin_addr.s_addr = listener_->GetIP().af_inet_ip;
     server.sin_port = htons(listener_->GetPort());
     while (true) {
-      if (mtx.TryLock() < 0) {
+      if (listener_->GetMtx()->TryLock() < 0) {
         // lock error, schedule out
         Frame::Sleep(500);
         continue;
@@ -205,7 +197,7 @@ class UdpSrvWork : public Work {
           Frame::recvfrom(listener_->GetSocketFd(), recvbuf, sizeof(recvbuf), 0,
                           (struct sockaddr *)&client, &clisocklen);
       if (ret > 0) {
-        mtx.Unlock();
+        listener_->GetMtx()->Unlock();
 
         // create tread to handle request
         UdpReqInfo req;
@@ -258,7 +250,7 @@ class Server {
  public:
   Server() : sig_read_fd_(-1), sig_write_fd_(-1) {}
   virtual ~Server() {}
-  virtual int Initialize() = 0;
+  virtual int Initialize(int argc, char *argv[]) = 0;
   virtual int Run() = 0;
   virtual void SignalCallback(int signo) = 0;
   virtual int GetSigReadFd() const { return sig_read_fd_; }
@@ -279,7 +271,7 @@ class ServerImpl : public Server,
  public:
   ServerImpl();
   virtual ~ServerImpl();
-  virtual int Initialize();
+  virtual int Initialize(int argc, char *argv[]);
   virtual int Run();
   virtual void SignalCallback(int signo);
 
@@ -291,11 +283,17 @@ class ServerImpl : public Server,
   int InitSrv();
   int InitListener(const std::string &proto);
   void FreeAllListener();
+  void SetProcTitle(const char *title);
 
   Json::Value config_;
   std::set<Listener *> listeners_;
   std::set<int> clients_;
 };
+
+extern "C" {
+void setproctitle(const char *fmt, ...);
+void spt_init(int argc, char *argv[]);
+}
 }
 
 #endif

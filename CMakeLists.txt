@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 SET(MYFLAG "-g -D__STDC_FORMAT_MACROS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
 add_definitions(${MYFLAG})
 
-file(GLOB TINYCO_CORE_CC *.cc ./util/*.cc)
+file(GLOB TINYCO_CORE_CC *.cc ./util/*.cc ./util/*.c)
 file(GLOB TINYCO_HTTP_CC 
     ./http/*.cc 
     ./dns/*.cc 

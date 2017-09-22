@@ -63,32 +63,36 @@ int ServerImpl::Daemonize() {
   return 0;
 }
 
-int ServerImpl::Initialize() {
+int ServerImpl::Initialize(int argc, char *argv[]) {
   int ret = 0;
+
   if (LocalLog::Instance()->Initialize("tinyco") < 0) {
     fprintf(stderr, "fail init log util\n");
     return -__LINE__;
   }
 
   if (!Frame::Init()) {
-    LOG_ERROR("fail to init frame");
+    fprintf(stderr, "fail to init frame");
     return -__LINE__;
   }
 
   if (!ParseConfig()) {
-    LOG_ERROR("fail to parse config");
+    fprintf(stderr, "fail to parse config");
     return -__LINE__;
   }
 
   if (InitSigAction() < 0) {
-    LOG_INFO("fail to init sigaction");
+    fprintf(stderr, "fail to init sigaction");
     return -__LINE__;
   }
 
   if ((ret = InitSrv()) < 0) {
-    LOG_INFO("fail to InitSrv: ret=%d", ret);
+    fprintf(stderr, "fail to InitSrv: ret=%d", ret);
     return -__LINE__;
   }
+
+  spt_init(argc, argv);
+  SetProcTitle("tinyco: worker");
 
   return 0;
 }
@@ -186,6 +190,7 @@ int ServerImpl::InitListener(const std::string &proto) {
           return -__LINE__;
         }
         LOG("proto=%s", proto.c_str());
+        listeners_.insert(l);
 
         if ("tcp" == proto)
           Frame::CreateThread(new TcpSrvWork(l, this, this));
@@ -252,4 +257,6 @@ void ServerImpl::FreeAllListener() {
     (*i)->Destroy();
   }
 }
+
+void ServerImpl::SetProcTitle(const char *title) { setproctitle("%s", title); }
 }

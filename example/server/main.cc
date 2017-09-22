@@ -44,9 +44,9 @@ class MyServer : public ServerImpl {
   }
 };
 
-int main() {
+int main(int argc, char *argv[]) {
   std::shared_ptr<MyServer> srv(new MyServer);
-  if (srv->Initialize() < 0) {
+  if (srv->Initialize(argc, argv) < 0) {
     LOG_ERROR("fail to initialize server");
     return -1;
   }

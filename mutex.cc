@@ -3,7 +3,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-int FileMtx::OpenLockFile(const std::string &lf) {
+int FileMtx::InitMtx(void *arg) {
+  std::string lf = static_cast<char *>(arg);
   fd_ =
       open(lf.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   if (fd_ != -1) {
@@ -45,6 +46,8 @@ int FileMtx::Unlock() {
   return 0;
 }
 
+#if (__amd64__ || __amd64)
+
 inline uint64_t AtomicCompareAndSet(uint64_t *a, uint64_t old, uint64_t n) {
   u_char res;
 
@@ -56,6 +59,15 @@ inline uint64_t AtomicCompareAndSet(uint64_t *a, uint64_t old, uint64_t n) {
       : "cc", "memory");
   return res;
 }
+
+#else
+
+inline uint64_t AtomicCompareAndSet(uint64_t *a, uint64_t old, uint64_t n) {
+  *a = n;
+  return n;
+}
+
+#endif
 
 AtomicMtx::~AtomicMtx() {
   if (ptr_) munmap(ptr_, sizeof(*ptr_));
@@ -70,9 +82,11 @@ int AtomicMtx::InitMtx(void *arg) {
 }
 
 int AtomicMtx::TryLock() {
+  if (!ptr_) return -1;
   return (*ptr_ == 0 && AtomicCompareAndSet(ptr_, 0, getpid())) ? 0 : -1;
 }
 
 int AtomicMtx::Unlock() {
+  if (!ptr_) return -1;
   return AtomicCompareAndSet(ptr_, getpid(), 0) ? 0 : -1;
 }

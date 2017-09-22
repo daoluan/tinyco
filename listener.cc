@@ -14,9 +14,12 @@ Listener::Listener() : listenfd_(-1) {}
 
 Listener::~Listener() {
   if (listenfd_ >= 0) close(listenfd_);
+  if (mtx_) delete mtx_;
 }
 
 int TcpListener::Listen(const network::IP &ip, uint16_t port) {
+  if (mtx_ && mtx_->InitMtx(NULL) < 0) return -__LINE__;
+
   ip_ = ip;
   port_ = port;
   listenfd_ = socket(AF_INET, SOCK_STREAM, 0);
@@ -56,6 +59,8 @@ int TcpListener::Listen(const network::IP &ip, uint16_t port) {
 }
 
 int UdpListener::Listen(const network::IP &ip, uint16_t port) {
+  if (mtx_ && mtx_->InitMtx(NULL) < 0) return -__LINE__;
+
   ip_ = ip;
   port_ = port;
 

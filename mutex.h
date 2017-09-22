@@ -7,13 +7,21 @@
 
 class Mutex {
  public:
+  virtual int InitMtx(void *arg) = 0;
   virtual int TryLock() = 0;
   virtual int Unlock() = 0;
 };
 
+class DummyMtx : public Mutex {
+ public:
+  int InitMtx(void *arg) { return 0; }
+  virtual int TryLock() { return 0; }
+  virtual int Unlock() { return 0; }
+};
+
 class FileMtx : public Mutex {
  public:
-  int OpenLockFile(const std::string &lf);
+  int InitMtx(void *arg);
   virtual int TryLock();
   virtual int Unlock();
 
