@@ -78,10 +78,10 @@ int Frame::MainThreadLoop(void *arg) {
 }
 
 Thread *Frame::PopPendingTop() {
-  auto *t = *thread_pending_.begin();
-  thread_pending_.erase(thread_pending_.begin());
-  make_heap(thread_pending_.begin(), thread_pending_.end(),
-            ThreadPendingTimeComp());
+  std::pop_heap(thread_pending_.begin(), thread_pending_.end(),
+                ThreadPendingTimeComp());
+  auto t = *(thread_pending_.end() - 1);
+  thread_pending_.pop_back();
   return t;
 }
 
@@ -445,8 +445,8 @@ void Frame::Sleep(uint32_t ms) {
 
 void Frame::PendThread(Thread *t) {
   thread_pending_.push_back(t);
-  make_heap(thread_pending_.begin(), thread_pending_.end(),
-            ThreadPendingTimeComp());
+  std::push_heap(thread_pending_.begin(), thread_pending_.end(),
+                 ThreadPendingTimeComp());
 }
 
 void Frame::UpdateLoopTimestamp() { last_loop_ts_ = time::mstime(); }
