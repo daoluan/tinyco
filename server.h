@@ -71,14 +71,8 @@ class TcpSrvWork : public Work {
 
  private:
   int RunTcpSrv() {
-    int worker_num = get_nprocs() > 0 ? get_nprocs() - 1 : 0;
-
-    for (auto i = 0; i < worker_num; i++) { 
-      if (fork() > 0)                        // child
-        break;
-    }
-
     int accepted = 0;
+
     while (true) {
       // avoid thundering herd
       if (accepted++ > 15) {
@@ -285,9 +279,31 @@ class ServerImpl : public Server,
   void FreeAllListener();
   void SetProcTitle(const char *title);
 
+  void MasterRun();
+  void WorkerRun();
+
   Json::Value config_;
   std::set<Listener *> listeners_;
   std::set<int> clients_;
+
+  // master
+  struct Worker {
+    std::string name;
+    int pid;
+  };
+
+  std::vector<Worker> worker_processes_;
+
+  enum WorkMode {
+    WM_UNKNOWN = 0,
+    WM_MASTER = 1,
+    WM_WORKER = 2,
+  };
+  WorkMode mode_;
+
+  // worker abnormal exit(segment fault, etc...)
+  int restart_worker_pid_;
+  void GetWorkerStatus();
 };
 
 extern "C" {

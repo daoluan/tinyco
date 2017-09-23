@@ -3,6 +3,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+namespace tinyco {
+
 int FileMtx::InitMtx(void *arg) {
   std::string lf = static_cast<char *>(arg);
   fd_ =
@@ -89,4 +91,14 @@ int AtomicMtx::TryLock() {
 int AtomicMtx::Unlock() {
   if (!ptr_) return -1;
   return AtomicCompareAndSet(ptr_, getpid(), 0) ? 0 : -1;
+}
+
+int AtomicMtx::ForcedUnlockIfNeed(void *check_data) {
+  if (*ptr_ == *reinterpret_cast<uint64_t *>(check_data)) {
+    *ptr_ = 0;
+    return 0;
+  }
+
+  return 0;
+}
 }

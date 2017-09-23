@@ -5,6 +5,7 @@
 #include <fstream>
 #include <streambuf>
 #include <fcntl.h>
+#include <sys/wait.h>
 
 #include "util/string.h"
 #include "http/http_server.h"
@@ -43,7 +44,7 @@ class SignalHelper : public Work {
 
 Server *SignalHelper::srv_;
 
-ServerImpl::ServerImpl() {}
+ServerImpl::ServerImpl() : mode_(WM_UNKNOWN), restart_worker_pid_(-1) {}
 
 ServerImpl::~ServerImpl() { Frame::Fini(); }
 
@@ -65,6 +66,14 @@ int ServerImpl::Daemonize() {
 
 int ServerImpl::Initialize(int argc, char *argv[]) {
   int ret = 0;
+
+  // set proc signal mask
+  sigset_t newset, oldset;
+  sigemptyset(&newset);
+  sigaddset(&newset, SIGCHLD);
+  sigaddset(&newset, SIGHUP);
+  sigaddset(&newset, SIGUSR1);
+  sigprocmask(SIG_BLOCK, &newset, NULL);
 
   if (LocalLog::Instance()->Initialize("tinyco") < 0) {
     fprintf(stderr, "fail init log util\n");
@@ -92,7 +101,39 @@ int ServerImpl::Initialize(int argc, char *argv[]) {
   }
 
   spt_init(argc, argv);
-  SetProcTitle("tinyco: worker");
+
+  int worker_num = get_nprocs() > 0 ? get_nprocs() : 1;
+  int childpid = 0;
+  const std::string &worker_title = "tinyco: worker";
+  for (auto i = 0; i < worker_num; i++) {
+    if ((childpid = fork()) == 0) break;
+    if (childpid < 0) {
+      fprintf(stderr, "fork error");
+      return -__LINE__;
+    }
+
+    Worker w = {worker_title, childpid};
+    worker_processes_.push_back(w);
+  }
+
+  // child init
+  if (0 == childpid) {
+
+    mode_ = WM_WORKER;
+    sigemptyset(&newset);
+    sigprocmask(SIG_SETMASK, &newset, NULL);
+
+    SetProcTitle(worker_title.c_str());
+
+    return 0;
+  }
+
+  // master init
+  mode_ = WM_MASTER;
+  sigemptyset(&newset);
+  sigprocmask(SIG_SETMASK, &newset, NULL);
+
+  SetProcTitle("tinyco: master");
 
   return 0;
 }
@@ -130,6 +171,8 @@ int ServerImpl::InitSigAction() {
   sa.sa_flags = 0;
   sigemptyset(&sa.sa_mask);
   sigaction(SIGUSR1, &sa, NULL);
+  sigaction(SIGCHLD, &sa, NULL);
+  sigaction(SIGHUP, &sa, NULL);
 
   int sockpair[2] = {0};
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair) == -1) {
@@ -183,19 +226,22 @@ int ServerImpl::InitListener(const std::string &proto) {
         Listener *l = NULL;
         if ("tcp" == proto)
           l = new TcpListener();
-        else
+        else if ("udp" == proto)
           l = new UdpListener();
+        else
+          continue;
 
         if (l->Listen(li.ip, li.port) < 0) {
           return -__LINE__;
         }
-        LOG("proto=%s", proto.c_str());
+        LOG_INFO("proto=%s", proto.c_str());
         listeners_.insert(l);
 
-        if ("tcp" == proto)
-          Frame::CreateThread(new TcpSrvWork(l, this, this));
-        else
-          Frame::CreateThread(new UdpSrvWork(l, this));
+        // worker run
+        // if ("tcp" == proto)
+        //   Frame::CreateThread(new TcpSrvWork(l, this, this));
+        // else if ("udp" == proto)
+        //   Frame::CreateThread(new UdpSrvWork(l, this));
       } else {
         return -__LINE__;
       }
@@ -223,17 +269,13 @@ int ServerImpl::InitSrv() {
 int ServerImpl::Run() {
   std::shared_ptr<Thread> me(Frame::InitHereAsNewThread());
 
-  while (true) {
-    LOG_DEBUG("in server main loop");
-    Frame::Sleep(1000);
-    ServerLoop();
-
-    if (GracefulShutdown()) {
-      if (GetConnSize() == 0) {
-        LOG_DEBUG("graceful shutdown");
-        break;
-      }
-    }
+  if (WM_MASTER == mode_) {
+    MasterRun();
+  } else if (WM_WORKER == mode_) {
+    WorkerRun();
+  } else {
+    fprintf(stderr, "unknown work mode");
+    return -__LINE__;
   }
 
   return 0;
@@ -243,12 +285,18 @@ int ServerImpl::ServerLoop() { return 0; }
 
 void ServerImpl::SignalCallback(int signo) {
   LOG_DEBUG("recv signo = %d", signo);
-  switch (signo) {
-    case SIGUSR1:
-      break;
-    case SIGHUP:
-      graceful_shutdown_ = true;
-      break;
+  if (WM_MASTER == mode_) {
+    switch (signo) {
+      case SIGCHLD:
+        GetWorkerStatus();
+        break;
+    }
+  } else if (WM_WORKER) {
+    switch (signo) {
+      case SIGHUP:
+        graceful_shutdown_ = true;
+        break;
+    }
   }
 }
 
@@ -259,4 +307,100 @@ void ServerImpl::FreeAllListener() {
 }
 
 void ServerImpl::SetProcTitle(const char *title) { setproctitle("%s", title); }
+
+void ServerImpl::MasterRun() {
+  LOG_DEBUG("master run");
+
+  while (true) {
+    Frame::Sleep(1000);
+    LOG_DEBUG("in master main loop");
+
+    if (restart_worker_pid_ > 0) {
+      Worker *w = NULL;
+      for (auto &ite : worker_processes_) {
+        if (ite.pid = restart_worker_pid_) {
+          w = &ite;
+        }
+      }
+
+      // reinit lock if need
+      uint64_t check_data = restart_worker_pid_;
+      for (auto &ite : listeners_) {
+        ite->GetMtx()->ForcedUnlockIfNeed(&check_data);
+      }
+
+      int new_worker_pid = fork();
+      if (0 == new_worker_pid) {
+        SetProcTitle("tinyco: worker");
+        WorkerRun();
+      } else if (new_worker_pid > 0) {
+        w->pid = new_worker_pid;
+      } else {
+        LOG_ERROR("WARMING: fail to restart");
+        continue;
+      }
+
+      restart_worker_pid_ = -1;
+    }
+  }
+}
+
+void ServerImpl::WorkerRun() {
+  LOG_DEBUG("worker run");
+
+  for (auto ite : listeners_) {
+    if (ite->GetProto() == "tcp") {
+      Frame::CreateThread(new TcpSrvWork(ite, this, this));
+    } else if (ite->GetProto() == "udp") {
+      Frame::CreateThread(new UdpSrvWork(ite, this));
+    } else
+      continue;
+  }
+
+  while (true) {
+    LOG_DEBUG("in worker main loop");
+    Frame::Sleep(1000);
+    ServerLoop();
+
+    if (GracefulShutdown()) {
+      if (GetConnSize() == 0) {
+        LOG_DEBUG("graceful shutdown");
+        break;
+      }
+    }
+  }
+}
+void ServerImpl::GetWorkerStatus() {
+  int pid;
+  int status;
+  for (;;) {
+    pid = waitpid(-1, &status, WNOHANG);
+
+    if (0 == pid) {
+      return;
+    }
+
+    if (-1 == pid) {
+      if (EINTR == errno) {
+        continue;
+      }
+
+      return;
+    }
+
+    for (auto &w : worker_processes_) {
+      if (w.pid == pid) {
+        LOG_INFO("worker %d exit and restart", pid);
+        restart_worker_pid_ = pid;
+        break;
+      }
+    }
+
+    if (-1 == restart_worker_pid_) {
+      LOG_ERROR("WARMING: unknow pid: %d", pid);
+    }
+
+    return;
+  }
+}
 }

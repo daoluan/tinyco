@@ -20,23 +20,31 @@ class Listener {
   }
   network::IP GetIP() const { return ip_; }
   uint16_t GetPort() const { return port_; }
+  std::string GetProto() const { return proto_; }
 
  protected:
   int listenfd_;
   network::IP ip_;
   uint16_t port_;
   Mutex *mtx_;
+  std::string proto_;
 };
 
 class TcpListener : public Listener {
  public:
-  TcpListener() { mtx_ = new AtomicMtx(); }
+  TcpListener() {
+    proto_ = "tcp";
+    mtx_ = new AtomicMtx();
+  }
   virtual int Listen(const network::IP &ip, uint16_t port);
 };
 
 class UdpListener : public Listener {
  public:
-  UdpListener() { mtx_ = new AtomicMtx(); }
+  UdpListener() {
+    proto_ = "tcp";
+    mtx_ = new AtomicMtx();
+  }
   virtual int Listen(const network::IP &ip, uint16_t port);
 };
 }

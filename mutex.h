@@ -5,11 +5,14 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+namespace tinyco {
+
 class Mutex {
  public:
   virtual int InitMtx(void *arg) = 0;
   virtual int TryLock() = 0;
   virtual int Unlock() = 0;
+  virtual int ForcedUnlockIfNeed(void *check_data) { return 0; }
 };
 
 class DummyMtx : public Mutex {
@@ -36,9 +39,10 @@ class AtomicMtx : public Mutex {
 
   virtual int TryLock();
   virtual int Unlock();
+  virtual int ForcedUnlockIfNeed(void *check_data);
 
  private:
   uint64_t *ptr_;
 };
-
+}
 #endif
