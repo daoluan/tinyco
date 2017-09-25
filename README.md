@@ -15,6 +15,8 @@ Clone tinyco and build it:
     % git clone https://github.com/daoluan/tinyco.git
     % cd tinyco
     % git submodule update --init --recursive
+
+    % make thirdparty
     
     % export CXX="g++-6.3"
     % cd ./third-party/c-ares/ && cmake -DCARES_STATIC=ON . && make; cd -

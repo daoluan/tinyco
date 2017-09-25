@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8.9)
 set(CMAKE_VERBOSE_MAKEFILE on)
+SET(CMAKE_C_COMPILER /usr/local/bin/gcc)
+SET(CMAKE_CXX_COMPILER /usr/local/bin/g++)
 SET(PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 SET(MYFLAG "-g -D__STDC_FORMAT_MACROS -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
@@ -64,3 +66,7 @@ target_link_libraries(http_client ${COMMON_STATIC_LIB})
 target_link_libraries(dns_test ${COMMON_STATIC_LIB})
 
 target_link_libraries(server ${COMMON_STATIC_LIB})
+
+add_custom_target(thirdparty COMMAND cd ./third-party/c-ares/ && cmake -DCARES_STATIC=ON && make && cd -
+    COMMAND cd ./third-party/libevent/ && cmake . && make && cd -
+    COMMAND cd ./third-party/jsoncpp/ && cmake . && make && cd -)
