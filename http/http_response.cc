@@ -12,7 +12,7 @@ HttpResponse::HttpResponse() { status = -1; }
 
 HttpResponse::HttpResponse(const std::string &content,
                            const std::string &content_type, int status) {
-  headers["content_type"] = content_type;
+  headers_["content_type"] = content_type;
   this->content = content;
   this->status = status;
 }
@@ -21,11 +21,11 @@ HttpResponse::~HttpResponse() {}
 
 void HttpResponse::SetHeader(const std::string &field,
                              const std::string &value) {
-  headers[field] = value;
+  headers_[field] = value;
 }
 
 void HttpResponse::UnsetHeader(const std::string &field) {
-  headers.erase(field);
+  headers_.erase(field);
 }
 
 void HttpResponse::SetStatus(int status) { this->status = status; }
@@ -35,10 +35,10 @@ void HttpResponse::SetContent(const std::string &content) {
   std::stringstream ss;
   ss << content.size();
 
-  headers["Content-Length"] = ss.str();
+  headers_["Content-Length"] = ss.str();
 }
 
-bool HttpResponse::SerializeToString(std::string *output) {
+bool HttpResponse::SerializeToString(std::string *output) const {
   bool restult = true;
   std::stringstream stream;
 
@@ -61,10 +61,9 @@ bool HttpResponse::SerializeToString(std::string *output) {
   }
   stream << crlf;
 
-  std::tr1::unordered_map<std::string, std::string>::iterator it,
-      end = headers.end();
-
-  for (it = headers.begin(); it != end; ++it) {
+  std::unordered_map<std::string, std::string>::const_iterator it,
+      end = headers_.end();
+  for (it = headers_.begin(); it != end; ++it) {
     if (!it->second.empty()) stream << it->first << ": " << it->second << crlf;
   }
 
@@ -73,6 +72,12 @@ bool HttpResponse::SerializeToString(std::string *output) {
 
   *output = stream.str();
   return restult;
+}
+
+std::string HttpResponse::SerializeToString() const {
+  std::string str;
+  SerializeToString(&str);
+  return str;
 }
 }
 }

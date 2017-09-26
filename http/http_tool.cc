@@ -6,8 +6,10 @@
 #include <assert.h>
 #include <stdio.h>
 #include <algorithm>
+#include <curl/curl.h>
 
 #include "http_parser.h"
+#include "util/string.h"
 
 namespace tinyco {
 namespace http {
@@ -43,6 +45,8 @@ static int request_url_cb(http_parser *parser, const char *at, size_t length) {
 
   T *t = static_cast<T *>(parser->data);
   t->http_struct->SetUri(std::string(at, length));
+  HttpParserImpl hpi;
+  hpi.ParseUrl(t->http_struct->GetUri(), &(t->http_struct->GetUriObj()));
   return 0;
 }
 
@@ -241,6 +245,18 @@ int HttpParserImpl::ParseUrl(const char *s, size_t slen, URL *url) {
   has_and_set(QUERY, query);
   has_and_set(FRAGMENT, fragment);
   has_and_set(USERINFO, userinfo);
+
+  // TODO lazy parse
+  auto query_kv = tinyco::string::Split(url->query, '&');
+  for (auto &ite : query_kv) {
+    auto kv_vec = tinyco::string::Split(ite, '=');
+    // /foo -> size = 1
+    // /foo=bar -> size = 2
+    if (kv_vec.size() < 2) continue;
+    url->query_params
+        [curl_unescape(kv_vec[0].c_str(), static_cast<int>(kv_vec[0].size()))] =
+        curl_unescape(kv_vec[1].c_str(), static_cast<int>(kv_vec[1].size()));
+  }
 
 #undef has_and_set
   return 0;

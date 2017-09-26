@@ -12,7 +12,7 @@ HttpRequest::HttpRequest()
 
 HttpRequest::~HttpRequest() {}
 
-void HttpRequest::SetUri(const std::string &uri) { this->uri_ = uri; }
+void HttpRequest::SetUri(const std::string &uri) { this->struri_ = uri; }
 
 void HttpRequest::SetHeader(const std::string &field,
                             const std::string &value) {
@@ -45,10 +45,10 @@ bool HttpRequest::SerializeToString(std::string *output) const {
       return false;
   }
 
-  ss << uri_ << " ";
+  ss << struri_ << " ";
   ss << "HTTP/1.1" << crlf;
 
-  std::tr1::unordered_map<std::string, std::string>::const_iterator it,
+  std::unordered_map<std::string, std::string>::const_iterator it,
       end = headers_.end();
 
   for (it = headers_.begin(); it != end; ++it) {
@@ -60,6 +60,12 @@ bool HttpRequest::SerializeToString(std::string *output) const {
 
   *output = ss.str();
   return true;
+}
+
+std::string HttpRequest::SerializeToString() const {
+  std::string str;
+  SerializeToString(&str);
+  return str;
 }
 }
 }

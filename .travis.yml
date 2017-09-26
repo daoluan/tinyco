@@ -10,6 +10,7 @@ addons:
       - g++-6
       - cmake-data
       - cmake
+      - libcurl-dev
 before_install:
   - export CXX="g++-6"
   - cd ./third-party/c-ares/; cmake -DCARES_STATIC=ON .; make; cd -

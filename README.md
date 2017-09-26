@@ -18,7 +18,6 @@ Clone tinyco and build it:
 
     % make thirdparty
     
-    % export CXX="g++-6.3"
     % cd ./third-party/c-ares/ && cmake -DCARES_STATIC=ON . && make; cd -
     % cd ./third-party/libevent/ && cmake . && make && cd -
     % cd ./third-party/jsoncpp/ && cmake . && make && cd -

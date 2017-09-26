@@ -2,7 +2,7 @@
 #define HTTP_RESPONSE_
 
 #include <string>
-#include <tr1/unordered_map>
+#include <unordered_map>
 
 namespace tinyco {
 namespace http {
@@ -21,27 +21,28 @@ class HttpResponse {
   std::string GetContent() const { return content; }
 
   std::string GetHeader(const std::string &header) const {
-    std::tr1::unordered_map<std::string, std::string>::const_iterator cit =
-        headers.find(header);
-    return cit != headers.end() ? cit->second : std::string("");
+    std::unordered_map<std::string, std::string>::const_iterator cit =
+        headers_.find(header);
+    return cit != headers_.end() ? cit->second : std::string("");
   }
 
-  const std::tr1::unordered_map<std::string, std::string> &GetHeaders() const {
-    return headers;
+  const std::unordered_map<std::string, std::string> &GetHeaders() const {
+    return headers_;
   }
 
-  bool SerializeToString(std::string *output);
+  bool SerializeToString(std::string *output) const;
+  std::string SerializeToString() const;
 
   void Clear() {
     status = 200;
     content.clear();
-    headers.clear();
+    headers_.clear();
   }
 
  private:
   int status;
   std::string content;
-  std::tr1::unordered_map<std::string, std::string> headers;
+  std::unordered_map<std::string, std::string> headers_;
 };
 }
 }

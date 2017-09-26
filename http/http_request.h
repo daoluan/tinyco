@@ -2,7 +2,7 @@
 #define HTTP_REQUEST_H_
 
 #include <string>
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <inttypes.h>
 
 namespace tinyco {
@@ -16,8 +16,13 @@ struct URL {
   std::string query;
   std::string fragment;
   std::string userinfo;
+  std::unordered_map<std::string, std::string> query_params;
 
   bool IsHttps() const { return 443 == port; }
+
+  bool IsSet(const std::string &param) {
+    return query_params.find(param) != query_params.end();
+  }
 };
 
 class HttpRequest {
@@ -28,12 +33,13 @@ class HttpRequest {
   void SetUri(const std::string &url);
   void SetHeader(const std::string &field, const std::string &value);
   int GetMethod() const { return method_; }
-  std::string GetUri() const { return uri_; }
+  std::string GetUri() const { return struri_; }
   void SetKeepAlive(bool b) { keepalive_ = b; }
   bool KeepAlive() const { return keepalive_; }
+  URL &GetUriObj() { return uri_; }
 
   std::string GetHeader(const std::string &header) const {
-    std::tr1::unordered_map<std::string, std::string>::const_iterator cit =
+    std::unordered_map<std::string, std::string>::const_iterator cit =
         headers_.find(header);
 
     return cit != headers_.end() ? cit->second : std::string("");
@@ -48,10 +54,11 @@ class HttpRequest {
   }
 
   bool SerializeToString(std::string *output) const;
+  std::string SerializeToString() const;
 
   void Clear() {
     method_ = HTTP_REQUEST_METHOD_UNKNOWN;
-    uri_.clear();
+    struri_.clear();
     content_.clear();
     headers_.clear();
   }
@@ -64,9 +71,10 @@ class HttpRequest {
 
  private:
   uint8_t method_;
-  std::string uri_;
+  std::string struri_;
+  URL uri_;
   std::string content_;
-  std::tr1::unordered_map<std::string, std::string> headers_;
+  std::unordered_map<std::string, std::string> headers_;
   bool keepalive_;
 };
 }
