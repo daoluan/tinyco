@@ -12,6 +12,7 @@
 
 #include "frame.h"
 #include "http_tool.h"
+#include "util/network.h"
 
 namespace tinyco {
 #define SSTR(x)                                                              \
@@ -137,17 +138,9 @@ int HttpsClient::CreateSocket() {
     return -1;
   }
 
-  if ((val = fcntl(fd_, F_GETFL, 0)) < 0) {
-    strerr_.append("fcntl F_GETFL error");
-    close(fd_);
+  if (network::SetNonBlock(fd_) < 0) {
+    strerr_.append("fail to set nonblock");
     return -2;
-  }
-
-  val |= O_NONBLOCK;
-  if (fcntl(fd_, F_SETFL, val) == -1) {
-    strerr_.append("fcntl F_SETFL error");
-    close(fd_);
-    return -3;
   }
 
   if (setsockopt(fd_, SOL_SOCKET, SO_KEEPALIVE, (void *)&keepalive,

@@ -6,6 +6,8 @@
 namespace tinyco {
 
 int FileMtx::InitMtx(void *arg) {
+  if (!arg) return -1;
+
   std::string lf = static_cast<char *>(arg);
   fd_ =
       open(lf.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);

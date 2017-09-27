@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "server.h"
 #include "http/http_client.h"
 #include "http/http_request.h"
@@ -68,7 +70,7 @@ class TestWork : public Work {
 };
 
 int main() {
-  Frame::Init();
+  assert(Frame::Init());
   Frame::CreateThread(new TestWork);
   Frame::Schedule();
   Frame::Fini();

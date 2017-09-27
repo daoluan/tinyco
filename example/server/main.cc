@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "server.h"
 #include "http/http_server.h"
 

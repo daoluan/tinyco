@@ -250,8 +250,8 @@ int HttpParserImpl::ParseUrl(const char *s, size_t slen, URL *url) {
   auto query_kv = tinyco::string::Split(url->query, '&');
   for (auto &ite : query_kv) {
     auto kv_vec = tinyco::string::Split(ite, '=');
-    // /foo -> size = 1
-    // /foo=bar -> size = 2
+    // ?foo -> size = 1
+    // ?foo=bar -> size = 2
     if (kv_vec.size() < 2) continue;
     url->query_params
         [curl_unescape(kv_vec[0].c_str(), static_cast<int>(kv_vec[0].size()))] =

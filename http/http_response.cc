@@ -8,7 +8,7 @@ namespace http {
 
 #define crlf "\r\n"
 
-HttpResponse::HttpResponse() { status = -1; }
+HttpResponse::HttpResponse() { status = 200; }
 
 HttpResponse::HttpResponse(const std::string &content,
                            const std::string &content_type, int status) {

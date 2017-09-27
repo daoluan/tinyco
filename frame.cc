@@ -131,10 +131,11 @@ int Frame::UdpSendAndRecv(const std::string &sendbuf,
   char recvbuf_[65536] = {0};
   auto recvlen = sizeof(recvbuf_);
   int fd = socket(AF_INET, SOCK_DGRAM, 0);
-  int flags = fcntl(fd, F_GETFL, 0);
-  if (flags < 0) return -1;
-  flags = flags | O_NONBLOCK;
-  fcntl(fd, F_SETFL, flags);
+
+  ret = network::SetNonBlock(fd);
+  if (ret < 0) {
+    return -1;
+  }
 
   if ((ret = sendto(fd, sendbuf.c_str(), sendbuf.size(), 0,
                     (struct sockaddr *)&dest_addr, sizeof(dest_addr))) < 0) {
@@ -161,10 +162,9 @@ int Frame::TcpSendAndRecv(const void *sendbuf, size_t sendlen, void *recvbuf,
                           size_t *recvlen, IsCompleteBase *is_complete) {
   int nsend = 0;
   int fd = socket(AF_INET, SOCK_DGRAM, 0);
-  int flags = fcntl(fd, F_GETFL, 0);
-  if (flags < 0) return -1;
-  flags = flags | O_NONBLOCK;
-  fcntl(fd, F_SETFL, flags);
+  if (network::SetNonBlock(fd) < 0) {
+    return -1;
+  }
 
   while (nsend == sendlen) {
     int ret = send(fd, static_cast<const char *>(sendbuf) + nsend,

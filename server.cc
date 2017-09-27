@@ -143,7 +143,7 @@ bool ServerImpl::ParseConfig() {
   std::shared_ptr<Json::CharReader> reader(b.newCharReader());
   JSONCPP_STRING errs;
 
-  std::ifstream t("./conf/tinyco.conf");
+  std::ifstream t("./conf/tinyco.json");
   std::string config_data((std::istreambuf_iterator<char>(t)),
                           std::istreambuf_iterator<char>());
 
@@ -236,12 +236,6 @@ int ServerImpl::InitListener(const std::string &proto) {
         }
         LOG_INFO("proto=%s", proto.c_str());
         listeners_.insert(l);
-
-        // worker run
-        // if ("tcp" == proto)
-        //   Frame::CreateThread(new TcpSrvWork(l, this, this));
-        // else if ("udp" == proto)
-        //   Frame::CreateThread(new UdpSrvWork(l, this));
       } else {
         return -__LINE__;
       }

@@ -27,7 +27,7 @@ class MyBuilder : public BusinessWorkBuilder {
   virtual TcpReqWork *BuildStreamBusinessWork(uint32_t port) { return NULL; }
 };
 
-int main(int argc, char **argv) {
+int main() {
   assert(Frame::Init());
   UdpSrv(0, 32000, new MyBuilder());
   Frame::Fini();
