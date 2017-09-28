@@ -16,13 +16,8 @@ Clone tinyco and build it:
     % cd tinyco
     % git submodule update --init --recursive
 
-    % make thirdparty
-    
-    % cd ./third-party/c-ares/ && cmake -DCARES_STATIC=ON . && make; cd -
-    % cd ./third-party/libevent/ && cmake . && make && cd -
-    % cd ./third-party/jsoncpp/ && cmake . && make && cd -
-    % cmake . && make
+    % cmake . && make thirdparty && make && make install
 
-It's very easy to DIY your tinyco-server. You can refer to [this](https://github.com/daoluan/tinyco/blob/master/example/server/main.cc). 
+It's very easy to DIY your tinyco-server. You can refer to [this](https://github.com/daoluan/tinyco/tree/master/example/server). 
 
 For more usages, Read [here](https://github.com/daoluan/tinyco/tree/master/example).
