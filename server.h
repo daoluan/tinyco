@@ -3,10 +3,15 @@
 
 #include <sys/sysinfo.h>
 #include <set>
+#include <map>
+#include <memory>
 
 #include "frame.h"
-#include "json/json.h"
 #include "util/network.h"
+
+namespace Json {
+class Value;
+};
 
 namespace tinyco {
 
@@ -282,7 +287,7 @@ class ServerImpl : public Server,
   void MasterRun();
   void WorkerRun();
 
-  Json::Value config_;
+  std::shared_ptr<Json::Value> config_;
   std::set<Listener *> listeners_;
   std::set<int> clients_;
 

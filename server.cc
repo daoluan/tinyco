@@ -9,6 +9,7 @@
 
 #include "util/string.h"
 #include "http/http_server.h"
+#include "json/json.h"
 
 namespace tinyco {
 
@@ -65,6 +66,7 @@ int ServerImpl::Daemonize() {
 }
 
 int ServerImpl::Initialize(int argc, char *argv[]) {
+  config_.reset(new Json::Value);
   int ret = 0;
 
   // set proc signal mask
@@ -149,14 +151,14 @@ bool ServerImpl::ParseConfig() {
 
   LOG_INFO("config = %s", config_data.c_str());
   if (!reader->parse(config_data.c_str(),
-                     config_data.c_str() + config_data.size(), &config_,
+                     config_data.c_str() + config_data.size(), config_.get(),
                      &errs)) {
     LOG_ERROR("fail to parse config, please check config");
     return false;
   }
 
-  if (!config_.isMember("udp") && config_.isMember("tcp") &&
-      !config_.isMember("http")) {
+  if (!config_->isMember("udp") && config_->isMember("tcp") &&
+      !config_->isMember("http")) {
     LOG_ERROR("no server item: udp, tcp or http");
     return false;
   }
@@ -219,10 +221,11 @@ struct ListenItem {
 
 int ServerImpl::InitListener(const std::string &proto) {
   ListenItem li;
-  if (config_.isMember(proto)) {
-    for (Json::ArrayIndex i = 0; i < config_[proto].size(); i++) {
-      LOG_DEBUG("listen %s", config_[proto][i]["listen"].asString().c_str());
-      if (li.Parse(proto, config_[proto][i]["listen"].asString())) {
+  const Json::Value &config = (*config_);
+  if (config_->isMember(proto)) {
+    for (Json::ArrayIndex i = 0; i < config[proto].size(); i++) {
+      LOG_DEBUG("listen %s", config[proto][i]["listen"].asString().c_str());
+      if (li.Parse(proto, config[proto][i]["listen"].asString())) {
         Listener *l = NULL;
         if ("tcp" == proto)
           l = new TcpListener();

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <memory>
 
+#include "event2/event.h"
 #include "util/time.h"
 
 namespace tinyco {
