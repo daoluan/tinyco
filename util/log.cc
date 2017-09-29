@@ -105,9 +105,18 @@ void LocalLog::WriteLog() {
   const uint32_t kMaxFilsNum = 100;
 
   // write to file
+  if (!file_.is_open()) {
+#define ANSI_COLOR_RED "\x1b[31m"
+#define ANSI_COLOR_RESET "\x1b[0m"
+
+    fprintf(stderr, "%s" ANSI_COLOR_RED
+                    "(uninitialized LocalLog obj)" ANSI_COLOR_RESET "\n",
+            content_.c_str());
+    return;
+  }
+
   file_ << content_.c_str() << std::endl;
   file_.flush();
-  return;
 
   // check log file size and rename log file if needed
   uint32_t fs = filesize(current_file_.c_str());
