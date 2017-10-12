@@ -6,6 +6,7 @@
 #include <streambuf>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <google/protobuf/descriptor.h>
 
 #include "util/string.h"
 #include "http/http_server.h"
@@ -138,6 +139,44 @@ int ServerImpl::Initialize(int argc, char *argv[]) {
   SetProcTitle("tinyco: master");
 
   return 0;
+}
+
+bool ServerImpl::AddRpcService(google::protobuf::Service *service,
+                               const std::string &restful_mappings) {
+  // contruct service map
+  auto methods = string::Split(restful_mappings, ',');
+  for (auto &method : methods) {
+    auto path_to_method = string::Split(method, '>');
+
+    if (path_to_method.size() != 2) return false;
+
+    string::trim(path_to_method[0]);
+    string::trim(path_to_method[1]);
+
+    MethodDescriptor md;
+    md.service = service;
+    md.method = path_to_method[1];
+
+    // check whether method is in service
+    auto pmd = service->GetDescriptor()->FindMethodByName(md.method);
+    if (!pmd) {
+      LOG_ERROR("no corresponding method: %s", md.method.c_str());
+      return false;
+    }
+
+    md.full_name = pmd->full_name();
+
+    // path to method descriptor
+    method_map_[path_to_method[0]] = md;
+  }
+
+  for (auto &ite : method_map_) {
+    LOG_INFO("%s => %s.%s added", ite.first.c_str(),
+             ite.second.service->GetDescriptor()->full_name().c_str(),
+             ite.second.method.c_str());
+  }
+
+  return true;
 }
 
 bool ServerImpl::ParseConfig() {

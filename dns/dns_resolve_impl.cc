@@ -22,7 +22,7 @@ std::unordered_map<std::string, DNSResolverImpl::ResCache>
 static ares_channel channel;
 static bool ares_channel_init = false;
 
-network::IP DNSResolverImpl::Resolve(const std::string &domain) {
+bool DNSResolverImpl::Resolve(const std::string &domain, network::IP *ip) {
   network::IP res;
   res.af_inet_ip = 0;
   int ret = 0;
@@ -33,12 +33,12 @@ network::IP DNSResolverImpl::Resolve(const std::string &domain) {
 
     ret = ares_library_init(ARES_LIB_INIT_ALL);
     if (ret != ARES_SUCCESS) {
-      return res;
+      return false;
     }
 
     ret = ares_init_options(&channel, &options, optmask);
     if (ret != ARES_SUCCESS) {
-      return res;
+      return false;
     }
 
     ares_channel_init = true;
@@ -47,7 +47,8 @@ network::IP DNSResolverImpl::Resolve(const std::string &domain) {
   // check cache
   auto c = res_cache_.find(domain);
   if (c != res_cache_.end() && c->second.timeout > time::mstime() / 1000llu) {
-    return c->second.PickOne();
+    *ip = c->second.PickOne();
+    return true;
   }
 
   // resolve
@@ -56,10 +57,10 @@ network::IP DNSResolverImpl::Resolve(const std::string &domain) {
   int buflen = 0;
   ret = ares_mkquery(domain.c_str(), ns_c_in, T_A, 1234, 0, &buf, &buflen);
   if (ret != 0) {
-    return res;
+    return false;
   }
 
-  if (channel->nservers <= 0) return res;
+  if (channel->nservers <= 0) return false;
   in_addr dnsip = (channel->servers[0].addr.addr.addr4);
 
   struct sockaddr_in addr;
@@ -71,14 +72,14 @@ network::IP DNSResolverImpl::Resolve(const std::string &domain) {
   req.assign(reinterpret_cast<char *>(buf), buflen);
   ret = Frame::UdpSendAndRecv(req, addr, &rsp);
   if (ret < 0) {
-    return res;
+    return false;
   }
 
   hostent *ht;
   const unsigned char *p = reinterpret_cast<const unsigned char *>(rsp.data());
   ret = ares_parse_a_reply(p, rsp.size(), &ht, NULL, NULL);
   if (!ht) {
-    return res;
+    return false;
   }
 
   auto &n = res_cache_[domain];
@@ -88,7 +89,8 @@ network::IP DNSResolverImpl::Resolve(const std::string &domain) {
     n.ip.push_back(res);
   }
 
-  return n.PickOne();
+  *ip = n.PickOne();
+  return true;
 }
 }
 }

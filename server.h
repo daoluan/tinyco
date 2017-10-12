@@ -5,6 +5,7 @@
 #include <set>
 #include <map>
 #include <memory>
+#include <google/protobuf/service.h>
 
 #include "frame.h"
 #include "util/network.h"
@@ -27,6 +28,7 @@ class BusinessWorkBuilder {
 
 class ConnTracker {
  public:
+  ConnTracker() : graceful_shutdown_(false) {}
   struct Conn {};
 
   void NewConn(int fd, const Conn &conn) {
@@ -274,8 +276,22 @@ class ServerImpl : public Server,
   virtual int Run();
   virtual void SignalCallback(int signo);
 
+  // restful_mappings example:
+  // "/v1/account/add > add,"
+  // "/v1/account/del > del,"
+  // "/v1/account/query > query"
+  bool AddRpcService(google::protobuf::Service *service,
+                     const std::string &restful_mappings);
+
+  struct MethodDescriptor {
+    google::protobuf::Service *service;
+    std::string method;
+    std::string full_name;
+  };
+
  private:
   virtual int Daemonize();
+
   bool ParseConfig();
   virtual int ServerLoop();
   int InitSigAction();
@@ -309,6 +325,9 @@ class ServerImpl : public Server,
   // worker abnormal exit(segment fault, etc...)
   int restart_worker_pid_;
   void GetWorkerStatus();
+
+ protected:
+  std::unordered_map<std::string, MethodDescriptor> method_map_;
 };
 
 extern "C" {

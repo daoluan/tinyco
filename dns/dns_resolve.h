@@ -17,7 +17,7 @@ class DNSResolver {
   DNSResolver() {}
   virtual ~DNSResolver() {}
 
-  virtual network::IP Resolve(const std::string &domain) = 0;
+  virtual bool Resolve(const std::string &domain, network::IP *ip) = 0;
 };
 }
 }

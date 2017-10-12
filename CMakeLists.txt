@@ -9,6 +9,7 @@ file(GLOB TINYCO_CORE_CC *.cc ./util/*.cc ./util/*.c)
 file(GLOB TINYCO_HTTP_CC 
     ./http/*.cc 
     ./dns/*.cc 
+    ./rpc/*.cc
     ./third-party/http-parser/http_parser.c) 
 
 SET(COMMON_STATIC_LIB 
@@ -17,7 +18,8 @@ SET(COMMON_STATIC_LIB
     ${PROJECT_DIR}/third-party/jsoncpp/src/lib_json/libjsoncpp.a)
 
 SET(COMMON_SHARE_LIB 
-    -lrt z libssl.so libcrypto.so libcurl.so)
+    -lrt z libssl.so libcrypto.so libcurl.so
+    libprotobuf.a)
 
 project (tinyco)
 
@@ -96,9 +98,11 @@ file(GLOB HEADERS *.h)
 file(GLOB UTIL_HEADERS util/*.h) 
 file(GLOB HTTP_HEADERS http/*.h) 
 file(GLOB DNS_HEADERS dns/*.h) 
+file(GLOB RPC_HEADERS rpc/*.h) 
 install(FILES ${HEADERS} DESTINATION include/tinyco)
 install(FILES ${UTIL_HEADERS} DESTINATION include/tinyco/util)
 install(FILES ${HTTP_HEADERS} DESTINATION include/tinyco/http)
 install(FILES ${DNS_HEADERS} DESTINATION include/tinyco/dns)
+install(FILES ${RPC_HEADERS} DESTINATION include/tinyco/rpc)
 install(FILES ${COMMON_STATIC_LIB} DESTINATION /usr/local/lib/tinyco)
 

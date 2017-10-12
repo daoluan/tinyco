@@ -12,6 +12,7 @@ struct URL {
   std::string schema;
   std::string host;
   uint32_t port;
+  std::string uri;
   std::string path;
   std::string query;
   std::string fragment;

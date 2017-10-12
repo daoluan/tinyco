@@ -1,0 +1,7 @@
+
+syntax = "proto2";
+option cc_generic_services = true;
+message MyRequest { optional bytes content = 1; }
+
+message MyResponse { optional bytes content = 1; }
+service Service { rpc Foo(MyRequest) returns(MyResponse); }

@@ -228,7 +228,7 @@ int HttpParserImpl::ParseUrl(const std::string &s, URL *url) {
 int HttpParserImpl::ParseUrl(const char *s, size_t slen, URL *url) {
   struct http_parser_url hpurl;
   int ret = http_parser_parse_url(s, slen, 0, &hpurl);
-  if (ret < 0) return -1;
+  if (ret != 0) return -1;
 
 #define has_and_set(field, member)                           \
   if (hpurl.field_set & (1 << UF_##field))                   \
@@ -241,7 +241,25 @@ int HttpParserImpl::ParseUrl(const char *s, size_t slen, URL *url) {
   if (hpurl.field_set & (1 << UF_PORT))
     url->port = std::stoul(std::string(&s[hpurl.field_data[UF_PORT].off],
                                        hpurl.field_data[UF_PORT].len).c_str());
+  else {
+    if (hpurl.field_set & (1 << UF_SCHEMA)) {
+      url->port = url->schema == "http" ? 80 : 443;
+    } else {
+      url->port = 80;
+    }
+  }
+
   has_and_set(PATH, path);
+
+  if (hpurl.field_set & (1 << UF_PATH)) {
+    url->uri = std::string(&s[hpurl.field_data[UF_PATH].off],
+                           slen - hpurl.field_data[UF_PATH].off - 1);
+  }
+
+  if (url->uri.empty()) {
+    url->uri = "/";
+  }
+
   has_and_set(QUERY, query);
   has_and_set(FRAGMENT, fragment);
   has_and_set(USERINFO, userinfo);

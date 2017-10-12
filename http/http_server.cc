@@ -10,7 +10,7 @@ namespace http {
 
 class HttpCheckPkg : public IsCompleteBase {
  public:
-  virtual int CheckPkg(const char *buffer, uint32_t buffer_len) {
+  virtual int CheckPkg(const char* buffer, uint32_t buffer_len) {
     HttpParserImpl hpi;
     size_t real_len = 0;
     int ret = hpi.CheckHttp(buffer, buffer_len, &real_len);
@@ -37,7 +37,7 @@ int HttpSrvWork::Run() {
       req.resize(req.size() * 2);
     }
 
-    int ret = Frame::recv(sockfd_, const_cast<char *>(req.data()) + recvd,
+    int ret = Frame::recv(sockfd_, const_cast<char*>(req.data()) + recvd,
                           req.size() - recvd, 0);
     if (ret > 0) {
       recvd += ret;

@@ -25,6 +25,16 @@ int SetReuseAddr(int fd);
 std::string ntoa(const IP &ip);
 
 std::string InetAddrToString(const sockaddr_in &addr);
+
+struct EndPoint {
+  IP ip;
+  uint16_t port;
+
+  EndPoint() : ip(IP{0}), port(0) {}
+  EndPoint(IP ip, uint16_t port) : ip(ip), port(port) {}
+
+  std::string ToString() { return ntoa(ip) + ":" + std::to_string(port); }
+};
 }
 }
 #endif

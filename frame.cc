@@ -236,8 +236,8 @@ int Frame::connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
   while ((ret = ::connect(sockfd, addr, addrlen)) < 0) {
     if (errno == EINTR) continue;
     if (EINPROGRESS == errno || EADDRINUSE == errno) {
-      event_assign(&ev, GetEventBase(), sockfd, EV_WRITE, SocketReadOrWrite,
-                   &ev);
+      event_assign(&ev, GetEventBase(), sockfd, EV_WRITE | EV_READ,
+                   SocketReadOrWrite, &ev);
       event_add(&ev, NULL);  // add timeout
       io_wait_map_[sockfd] = running_thread_;
       running_thread_->Schedule();

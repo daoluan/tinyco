@@ -16,7 +16,7 @@ class DNSResolverImpl : public DNSResolver {
  public:
   DNSResolverImpl() {}
   virtual ~DNSResolverImpl() {}
-  virtual network::IP Resolve(const std::string &domain);
+  virtual bool Resolve(const std::string &domain, network::IP *ip);
 
  private:
   struct ResCache {

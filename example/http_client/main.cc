@@ -4,19 +4,18 @@
 #include "http/http_client.h"
 #include "http/http_request.h"
 #include "http/https_client.h"
+#include "http/http_op.h"
 #include "dns/dns_resolve_impl.h"
 
 using namespace tinyco;
 class TestWork : public Work {
  public:
-  TestWork() {}
-  virtual ~TestWork() {}
-
   int Run() {
+    network::IP ip;
     dns::DNSResolverImpl dri;
     const std::string &domain = "baidu.com";
-    network::IP ip = dri.Resolve(domain);
-    if (ip.af_inet_ip == 0) {
+    auto bret = dri.Resolve(domain, &ip);
+    if (!bret) {
       LOG("dns resolve error, check your dns config");
       return 0;
     }
@@ -65,6 +64,14 @@ class TestWork : public Work {
     }
     LOG("https response = %s", rsp.c_str());
 
+    LOG("test http op");
+    std::map<std::string, std::string> extra_headers;
+    http::HttpResponse hrsp;
+    ret = http::HttpOp::HttpGet("https://www.baidu.com", extra_headers, &hrsp);
+    if (ret < 0)
+      LOG("HttpGet error: ret=%d", ret);
+    else
+      LOG("new intf: ret=%d|%s", ret, hrsp.SerializeToString().c_str());
     return 0;
   }
 };
