@@ -13,11 +13,11 @@ addons:
       - libcurl4-gnutls-dev 
 before_install:
   - export CXX="g++-6"
+  - wget https://github.com/google/protobuf/releases/download/v3.3.0/protobuf-cpp-3.3.0.tar.gz
+  - tar -xzvf protobuf-cpp-3.3.0.tar.gz
+  - pushd protobuf-2.4.1 && ./configure --prefix=/usr && make && sudo make install && popd
   - cd ./third-party/c-ares/; cmake -DCARES_STATIC=ON .; make; cd -
   - cd ./third-party/libevent/; cmake .; make; cd -
   - cd ./third-party/jsoncpp/; cmake .; make; cd -
 install:
-  - wget https://github.com/google/protobuf/releases/download/v3.3.0/protobuf-cpp-3.3.0.tar.gz
-  - tar -xzvf protobuf-cpp-3.3.0.tar.gz
-  - pushd protobuf-2.4.1 && ./configure --prefix=/usr && make && sudo make install && popd
 script: cmake . && make
