@@ -30,9 +30,13 @@ class TestWork : public Work {
     MyResponse response;
 
     channel.CallMethod(NULL, &ctrl, &request, &response, NULL);
+    if (ctrl.error_code() == 0) {
+      LOG("CallMethod ret=%d|response=%s", ctrl.error_code(),
+          response.DebugString().c_str());
+    } else {
+      LOG("CallMethod error_code=%d", ctrl.error_code());
+    }
 
-    LOG("CallMethod ret=%d|response=%s", ctrl.error_code(),
-        response.DebugString().c_str());
     return 0;
   }
 };

@@ -354,7 +354,7 @@ void ServerImpl::MasterRun() {
     if (restart_worker_pid_ > 0) {
       Worker *w = NULL;
       for (auto &ite : worker_processes_) {
-        if (ite.pid = restart_worker_pid_) {
+        if (ite.pid == restart_worker_pid_) {
           w = &ite;
         }
       }
