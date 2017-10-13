@@ -230,21 +230,35 @@ class UdpSrvWork : public Work {
 
 inline int TcpSrv(uint32_t ip, uint16_t port,
                   BusinessWorkBuilder *work_builder) {
+  if (!Frame::Init()) return -__LINE__;
+
   auto l = new TcpListener();
   if (l->Listen(network::IP{ip}, port) < 0) return -__LINE__;
 
-  Frame::CreateThread(new TcpSrvWork(l, work_builder, NULL));
-  Frame::Schedule();
+  auto t = Frame::CreateThread(new TcpSrvWork(l, work_builder, NULL));
+  while (!t.IsDead()) {
+    Frame::Sleep(1000);
+  }
   delete l;
+
+  Frame::Fini();
+  return 0;
 }
 
 inline int UdpSrv(uint32_t ip, uint16_t port,
                   BusinessWorkBuilder *work_builder) {
+  if (!Frame::Init()) return -__LINE__;
   auto l = new UdpListener();
   if (l->Listen(network::IP{ip}, port) < 0) return -__LINE__;
-  Frame::CreateThread(new UdpSrvWork(l, work_builder));
-  Frame::Schedule();
+
+  auto t = Frame::CreateThread(new UdpSrvWork(l, work_builder));
+  while (!t.IsDead()) {
+    Frame::Sleep(1000);
+  }
   delete l;
+
+  Frame::Fini();
+  return 0;
 }
 
 class Server {

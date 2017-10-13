@@ -34,14 +34,19 @@ class TestWork : public Work {
     }
 
     LOG("recv content: %s", recvbuf.c_str());
+
+    return 0;
   }
 };
 
 int main() {
   assert(Frame::Init());
-  Frame::CreateThread(new TestWork);
-  Frame::Schedule();
-  Frame::Fini();
 
+  auto t = Frame::CreateThread(new TestWork);
+  while (!t.IsDead()) {
+    Frame::Sleep(1000);
+  }
+
+  Frame::Fini();
   return 0;
 }

@@ -49,9 +49,8 @@ class Frame {
   static ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
                           struct sockaddr *src_addr, socklen_t *addrlen);
 
-  static int CreateThread(Work *w);
+  static ThreadWrapper CreateThread(Work *w);
   static void Sleep(uint32_t ms);
-  static int Schedule();
   static void RecycleRunningThread();
 
   // it's very useful before mainloop of your program
@@ -63,6 +62,8 @@ class Frame {
   }
 
  private:
+  static int Schedule();
+  static Thread *AllocNewThread();
   static void SocketReadOrWrite(int fd, short events, void *arg);
   static int MainThreadLoop(void *arg);
   static void PendThread(Thread *t);
@@ -84,6 +85,7 @@ class Frame {
   static Thread *main_thread_;
   static Thread *running_thread_;
   static struct event_base *base_;
+  static int HandleProcess(void *arg);
 
  private:
   Frame() {}

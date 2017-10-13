@@ -78,8 +78,12 @@ class TestWork : public Work {
 
 int main() {
   assert(Frame::Init());
-  Frame::CreateThread(new TestWork);
-  Frame::Schedule();
+
+  auto t = Frame::CreateThread(new TestWork);
+  while (!t.IsDead()) {
+    Frame::Sleep(1000);
+  }
+
   Frame::Fini();
   return 0;
 }

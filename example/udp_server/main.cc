@@ -16,6 +16,8 @@ class TestWork : public UdpReqWork {
 
     LOG("rsp to client");
     Reply(req_.reqpkg);
+
+    return 0;
   }
 };
 
@@ -28,8 +30,6 @@ class MyBuilder : public BusinessWorkBuilder {
 };
 
 int main() {
-  assert(Frame::Init());
   UdpSrv(0, 32000, new MyBuilder());
-  Frame::Fini();
   return 0;
 }

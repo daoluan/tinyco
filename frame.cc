@@ -40,6 +40,18 @@ bool Frame::Init() {
   m->SetContext(MainThreadLoop, NULL);
   main_thread_ = m;
 
+  // initialize own thread
+  running_thread_ = new Thread();
+  if (!running_thread_->Init()) {
+    return false;
+  }
+
+  for (auto i = 0; i < 1000; i++) {
+    thread_free_.push_back(new Thread());
+  }
+
+  running_thread_->Schedule();
+
   base_ = NULL;
   return true;
 }
@@ -396,7 +408,7 @@ void Frame::SocketReadOrWrite(int fd, short events, void *arg) {
   event_base_loopbreak(Frame::base_);
 }
 
-int HandleProcess(void *arg) {
+int Frame::HandleProcess(void *arg) {
   auto *w = static_cast<Work *>(arg);
   LOG_DEBUG("run ret=%d", w->Run());
   delete w;
@@ -408,17 +420,31 @@ int HandleProcess(void *arg) {
 }
 
 void Frame::RecycleRunningThread() {
+  running_thread_->SetState(Thread::TS_DEAD);
   thread_free_.push_back(running_thread_);
   running_thread_ = NULL;
 }
 
-int Frame::CreateThread(Work *w) {
+Thread *Frame::AllocNewThread() {
+  if (thread_free_.empty()) return new Thread;
+  Thread *t = *(--thread_free_.end());
+  thread_free_.pop_back();
+
+  t->SetState(Thread::TS_STOP);
+  return t;
+}
+
+ThreadWrapper Frame::CreateThread(Work *w) {
   // work will be deleted by HandleProcess()
   // thread should not be deleted before deleting work
-  auto *t = new Thread;
+  auto *t = AllocNewThread();
+  if (!t) return ThreadWrapper(NULL);
+
   t->Init();
   t->SetContext(HandleProcess, w);
   thread_runnable_.push_back(t);
+
+  return ThreadWrapper(t);
 }
 
 int Frame::Schedule() {

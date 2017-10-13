@@ -25,8 +25,6 @@ class MyBuilder : public BusinessWorkBuilder {
 };
 
 int main() {
-  assert(Frame::Init());
   TcpSrv(0, 8080, new MyBuilder());
-  Frame::Fini();
   return 0;
 }

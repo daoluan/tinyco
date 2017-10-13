@@ -48,9 +48,11 @@ class Thread {
     TS_STOP,
     TS_RUNNABLE,
     TS_PENDING,
+    TS_DEAD,
   };
 
   void SetState(int state) { state_ = state; }
+  int GetState() const { return state_; }
 
   // restore me
   void RestoreContext();
@@ -74,6 +76,16 @@ class Thread {
   int thread_id_;
   Thread *parent_;
   uint64_t wakeup_ts_;
+};
+
+class ThreadWrapper {
+ public:
+  explicit ThreadWrapper(Thread *t) : t(t) {}
+  bool IsDead() { return t->GetState() == Thread::TS_DEAD; }
+  bool IsValid() { return !!t; }
+
+ private:
+  Thread *t;
 };
 }
 
