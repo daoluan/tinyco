@@ -337,7 +337,7 @@ class ServerImpl : public Server,
   WorkMode mode_;
 
   // worker abnormal exit(segment fault, etc...)
-  int restart_worker_pid_;
+  std::vector<int> restart_worker_pid_;
   void GetWorkerStatus();
 
  protected:

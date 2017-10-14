@@ -46,7 +46,7 @@ class SignalHelper : public Work {
 
 Server *SignalHelper::srv_;
 
-ServerImpl::ServerImpl() : mode_(WM_UNKNOWN), restart_worker_pid_(-1) {}
+ServerImpl::ServerImpl() : mode_(WM_UNKNOWN) {}
 
 ServerImpl::~ServerImpl() { Frame::Fini(); }
 
@@ -217,7 +217,7 @@ int ServerImpl::InitSigAction() {
 
   int sockpair[2] = {0};
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair) == -1) {
-    printf("create unnamed socket pair failed:%s\n", strerror(errno));
+    fprintf(stderr, "create unnamed socket pair failed:%s\n", strerror(errno));
     exit(-1);
   }
 
@@ -351,16 +351,16 @@ void ServerImpl::MasterRun() {
     Frame::Sleep(1000);
     LOG_DEBUG("in master main loop");
 
-    if (restart_worker_pid_ > 0) {
+    for (auto &pid : restart_worker_pid_) {
+      LOG_INFO("pid=%d", pid);
       Worker *w = NULL;
       for (auto &ite : worker_processes_) {
-        if (ite.pid == restart_worker_pid_) {
+        if (ite.pid == pid) {
           w = &ite;
         }
       }
 
-      // reinit lock if need
-      uint64_t check_data = restart_worker_pid_;
+      uint64_t check_data = pid;
       for (auto &ite : listeners_) {
         ite->GetMtx()->ForcedUnlockIfNeed(&check_data);
       }
@@ -369,15 +369,16 @@ void ServerImpl::MasterRun() {
       if (0 == new_worker_pid) {
         SetProcTitle("tinyco: worker");
         WorkerRun();
+        break;
       } else if (new_worker_pid > 0) {
         w->pid = new_worker_pid;
       } else {
         LOG_ERROR("WARMING: fail to restart");
         continue;
       }
-
-      restart_worker_pid_ = -1;
     }
+
+    restart_worker_pid_.clear();
   }
 }
 
@@ -424,18 +425,20 @@ void ServerImpl::GetWorkerStatus() {
       return;
     }
 
+    int restart_pid = 0;
     for (auto &w : worker_processes_) {
       if (w.pid == pid) {
+        restart_pid = pid;
         LOG_INFO("worker %d exit and restart", pid);
-        restart_worker_pid_ = pid;
         break;
       }
     }
 
-    if (-1 == restart_worker_pid_) {
+    if (-1 == restart_pid) {
       LOG_ERROR("WARMING: unknow pid: %d", pid);
     }
 
+    restart_worker_pid_.push_back(restart_pid);
     return;
   }
 }
