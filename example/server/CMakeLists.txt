@@ -8,7 +8,8 @@ add_definitions(${MYFLAG})
 SET(COMMON_STATIC_LIB 
     libevent.a 
     libcares_static.a 
-    libjsoncpp.a)
+    libjsoncpp.a
+    libprotobuf.a)
 
 SET(COMMON_SHARE_LIB 
     -lrt z libssl.so libcrypto.so libcurl.so)
