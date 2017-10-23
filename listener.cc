@@ -71,11 +71,9 @@ int UdpListener::Listen(const network::IP &ip, uint16_t port) {
   }
 
   struct sockaddr_in server, client;
-  socklen_t clisocklen;
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = ip_.af_inet_ip;
   server.sin_port = htons(port_);
-  clisocklen = sizeof(client);
 
   if (network::SetNonBlock(listenfd_) < 0) {
     LOG_ERROR("set nonblock error");
