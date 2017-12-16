@@ -9,7 +9,7 @@ namespace tinyco {
 enum LOGLEVEL {
   LL_DEBUG = 0,
   LL_INFO,
-  LL_WARMING,
+  LL_WARNING,
   LL_ERROR,
 };
 
@@ -21,7 +21,7 @@ class Log {
                      const char *fmt, ...) = 0;
   virtual void Info(uint64_t uin, uint32_t line, const char *func,
                     const char *fmt, ...) = 0;
-  virtual void Warming(uint64_t uin, uint32_t line, const char *func,
+  virtual void Warning(uint64_t uin, uint32_t line, const char *func,
                        const char *fmt, ...) = 0;
   virtual void Error(uint64_t uin, uint32_t line, const char *func,
                      const char *fmt, ...) = 0;
@@ -43,7 +43,7 @@ class Log {
 
 class LocalLog : public Log {
  public:
-  static LocalLog *Instance();
+  static Log *Instance();
 
   virtual int Initialize(const void *arg);
 
@@ -53,7 +53,7 @@ class LocalLog : public Log {
   virtual void Info(uint64_t uin, uint32_t line, const char *func,
                     const char *fmt, ...);
 
-  virtual void Warming(uint64_t uin, uint32_t line, const char *func,
+  virtual void Warning(uint64_t uin, uint32_t line, const char *func,
                        const char *fmt, ...);
 
   virtual void Error(uint64_t uin, uint32_t line, const char *func,
@@ -75,7 +75,7 @@ class LocalLog : public Log {
 #define LOG_ERROR(fmt, arg...) \
   printf("[%s][%s][%u]: " fmt "\n", __FILE__, __FUNCTION__, __LINE__, ##arg)
 
-#define LOG_WARMING(fmt, arg...) \
+#define LOG_WARNING(fmt, arg...) \
   printf("[%s][%s][%u]: " fmt "\n", __FILE__, __FUNCTION__, __LINE__, ##arg)
 
 #define LOG_NOTICE(fmt, arg...) \
@@ -95,8 +95,8 @@ class LocalLog : public Log {
 #define LOG_ERROR(fmt, arg...) \
   LocalLog::Instance()->Error(LL_ERROR, __LINE__, __FUNCTION__, fmt, ##arg)
 
-#define LOG_WARMING(fmt, arg...) \
-  LocalLog::Instance()->Warming(LL_WARMING, __LINE__, __FUNCTION__, fmt, ##arg)
+#define LOG_WARNING(fmt, arg...) \
+  LocalLog::Instance()->Warning(LL_WARNING, __LINE__, __FUNCTION__, fmt, ##arg)
 
 #define LOG_INFO(fmt, arg...) \
   LocalLog::Instance()->Info(LL_INFO, __LINE__, __FUNCTION__, fmt, ##arg)

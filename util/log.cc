@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <sstream>
+#include <sys/time.h>
 
 #include "util/time.h"
 
@@ -21,7 +22,7 @@ inline std::ifstream::pos_type filesize(const char *filename) {
   return in.tellg();
 }
 
-LocalLog *LocalLog::Instance() {
+Log *LocalLog::Instance() {
   static LocalLog ll;
   return &ll;
 }
@@ -58,9 +59,9 @@ void LocalLog::Info(uint64_t uin, uint32_t line, const char *func,
   COMMONLOG();
 }
 
-void LocalLog::Warming(uint64_t uin, uint32_t line, const char *func,
+void LocalLog::Warning(uint64_t uin, uint32_t line, const char *func,
                        const char *fmt, ...) {
-  if (loglevel_ > LL_WARMING) return;
+  if (loglevel_ > LL_WARNING) return;
 
   COMMONLOG();
 }
@@ -101,7 +102,7 @@ uint32_t Log::AppendLogItemHeader(uint64_t uin, uint32_t line,
 }
 
 void LocalLog::WriteLog() {
-  const uint32_t kMaxFilesize = 1024 * 2014 * 100;
+  const uint32_t kMaxFilesize = 1024 * 1024;
   const uint32_t kMaxFilsNum = 100;
 
   // write to file
@@ -118,31 +119,48 @@ void LocalLog::WriteLog() {
   file_ << content_.c_str() << std::endl;
   file_.flush();
 
-  // check log file size and rename log file if needed
-  uint32_t fs = filesize(current_file_.c_str());
-  if (fs < kMaxFilesize) {
-    return;
+  // only workers reopen log file in N seconds
+  if (getppid() > 1) {
+    static uint32_t lasts = ::time(NULL);
+    uint32_t nows = ::time(NULL);
+    if (lasts + 10 < nows) {
+      if (file_.is_open()) file_.close();
+      file_.open(current_file_.c_str(),
+                 std::ofstream::out | std::ofstream::app);
+      nows = nows;
+    }
   }
 
-  for (uint32_t i = kMaxFilsNum - 1; i >= 0; i++) {
+  // simple log rotation
+  // only master retate the log. workers reopen log file every N seconds. it
+  // may cause some workers log would write into old files in N seconds.
+  if (getppid() == 1) {
+    // check log file size and rename log file if needed
+    uint32_t fs = filesize(current_file_.c_str());
+    if (fs < kMaxFilesize) {
+      return;
+    }
 
-    std::string fp;
-    if (i > 0)
-      fp = filepath_ + "_" + std::to_string(i) + ".log";
-    else
-      fp = filepath_ + ".log";
+    for (int i = kMaxFilsNum - 1; i >= 0; i--) {
+      std::string fp;
+      if (i > 0)
+        fp = filepath_ + "_" + std::to_string(i) + ".log";
+      else
+        fp = filepath_ + ".log";
 
-    if (access(fp.c_str(), F_OK) != -1) {
-      if (i == kMaxFilesize - 1) {
-        printf("remove file\n");
-        remove(fp.c_str());
-      } else {
-        printf("rename file\n");
-        const std::string &fp_new =
-            filepath_ + "_" + std::to_string(i + 1) + ".log";
-        rename(fp.c_str(), fp_new.c_str());
+      if (access(fp.c_str(), F_OK) != -1) {
+        if (i == kMaxFilsNum - 1) {
+          remove(fp.c_str());
+        } else {
+          const std::string &fp_new =
+              filepath_ + "_" + std::to_string(i + 1) + ".log";
+          rename(fp.c_str(), fp_new.c_str());
+        }
       }
-    }  // if access
-  }    // for
+    }
+
+    file_.close();
+    file_.open(current_file_.c_str(), std::ofstream::out | std::ofstream::app);
+  }
 }
 }
