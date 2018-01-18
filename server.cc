@@ -327,7 +327,7 @@ void ServerImpl::SignalCallback(int signo) {
         GetWorkerStatus();
         break;
     }
-  } else if (WM_WORKER) {
+  } else if (WM_WORKER == mode_) {
     switch (signo) {
       case SIGHUP:
         graceful_shutdown_ = true;
@@ -373,7 +373,7 @@ void ServerImpl::MasterRun() {
       } else if (new_worker_pid > 0) {
         w->pid = new_worker_pid;
       } else {
-        LOG_ERROR("WARMING: fail to restart");
+        LOG_ERROR("WARNING: fail to restart");
         continue;
       }
     }
@@ -435,7 +435,7 @@ void ServerImpl::GetWorkerStatus() {
     }
 
     if (-1 == restart_pid) {
-      LOG_ERROR("WARMING: unknow pid: %d", pid);
+      LOG_ERROR("WARNING: unknow pid: %d", pid);
     }
 
     restart_worker_pid_.push_back(restart_pid);
