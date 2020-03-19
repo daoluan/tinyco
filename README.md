@@ -21,3 +21,7 @@ Clone tinyco and build it:
 It's very easy to DIY your tinyco-server. You can refer to [this](https://github.com/daoluan/tinyco/tree/master/example/server). 
 
 For more usages, Read [here](https://github.com/daoluan/tinyco/tree/master/example).
+
+# refs
+
+- [blog](http://daoluan.net/%E7%BC%96%E7%A8%8B%E5%B0%8F%E8%AE%B0/2017/09/02/how-to-DIY-your-tinyco-server.html)
