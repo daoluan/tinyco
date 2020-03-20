@@ -26,4 +26,5 @@ For more usages, Read [here](https://github.com/daoluan/tinyco/tree/master/examp
 
 # refs
 
-- [blog](http://daoluan.net/%E7%BC%96%E7%A8%8B%E5%B0%8F%E8%AE%B0/2017/09/02/how-to-DIY-your-tinyco-server.html)
+- [how-to-solve-thundering-herd-in-tinyco](http://daoluan.net/%E7%BC%96%E7%A8%8B%E5%B0%8F%E8%AE%B0/2017/08/16/how-to-solve-thundering-herd-in-tinyco.html)
+- [how-to-DIY-your-tinyco-server](http://daoluan.net/%E7%BC%96%E7%A8%8B%E5%B0%8F%E8%AE%B0/2017/09/02/how-to-DIY-your-tinyco-server.html)
